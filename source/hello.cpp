@@ -1,9 +1,9 @@
+#include <SDL2/SDL.h>
 #include <iostream>
+#include "VkBootstrap.h"
 #include "glm/common.hpp"
 #include "glm/gtx/norm.hpp"
-#include <SDL2/SDL.h>
 #include "imgui.h"
-#include "VkBootstrap.h"
 
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
@@ -24,7 +24,7 @@ int main() {
     // sdl2
     SDL_Window* win = NULL;
     SDL_Window* surf = NULL;
-    if(SDL_Init(SDL_INIT_VIDEO) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         std::cerr << "Error initializing SDL2\n";
         return 1;
     }
