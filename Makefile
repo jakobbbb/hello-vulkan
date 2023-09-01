@@ -19,7 +19,7 @@ download-external:
 	$(MAKE) -C $(EXTERNAL_DIR)
 
 compile_commands.json:
-	ln -s build/compile_commands.json .
+	ln -fs build/compile_commands.json .
 
 .PHONY: prepare-build
 prepare-build: download-external compile_commands.json

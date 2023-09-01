@@ -9,6 +9,11 @@
 #include "stb_image.h"
 #endif
 
+#ifndef TINYOBJLOADER_IMPLEMENTATION
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+#endif
+
 int main() {
     // glm
     glm::vec3 hello{1, 1, 0};
