@@ -12,6 +12,12 @@ git clone --recurse-submodules https://github.com/jakobbbb/hello-vulkan
 ```
 or run `git submodule init && git submodule update` after cloning.
 
+## Dependencies
+
+Ubuntu:  `apt install libsdl2-dev libvulkan-dev`.
+
+Arch:  `pacman -S sdl2 vulkan-headers`.
+
 ## Building
 
 For convenience, a top-level `Makefile` is provided.
