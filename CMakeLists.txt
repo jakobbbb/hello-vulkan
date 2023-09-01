@@ -7,6 +7,11 @@ set(EXTERNAL_DIR external)
 # glm
 include_directories(${EXTERNAL_DIR}/glm)
 
+# sdl2
+find_package(SDL2 REQUIRED)
+include_directories(${SDL2_INCLUDE_DIRS})
+set(LIBRARIES ${LIBRARIES} ${SDL2_LIBRARIES})
+
 #check for CMakeLists.txt files in subdirectory source (where your applications are)
 add_subdirectory(source)
 
