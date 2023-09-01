@@ -3,6 +3,7 @@
 #include "glm/gtx/norm.hpp"
 #include <SDL2/SDL.h>
 #include "imgui.h"
+#include "VkBootstrap.h"
 
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
@@ -31,8 +32,8 @@ int main() {
     // imgui
     ImGui::CreateContext();
 
-    // stb
-
+    // VkBootstrap
+    vkb::InstanceBuilder builder;
 
     return 0;
 }

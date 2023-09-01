@@ -26,5 +26,9 @@ include_directories(${EXTERNAL_DIR}/stb)
 # tinyobjloader
 include_directories(${EXTERNAL_DIR}/tinyobjloader)
 
+# vk-bootstrap
+include_directories(${EXTERNAL_DIR}/vk-bootstrap)
+set(LIBRARIES ${LIBRARIES} vk-bootstrap::vk-bootstrap)
+
 #check for CMakeLists.txt files in subdirectory source (where your applications are)
 add_subdirectory(source)
