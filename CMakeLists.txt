@@ -30,5 +30,10 @@ include_directories(${EXTERNAL_DIR}/tinyobjloader)
 include_directories(${EXTERNAL_DIR}/vk-bootstrap)
 set(LIBRARIES ${LIBRARIES} vk-bootstrap::vk-bootstrap)
 
+# vma
+set(VulkanMemoryAllocator_DIR external/VulkanMemoryAllocator/build/install/share/cmake/VulkanMemoryAllocator)
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
+set(LIBRARIES ${LIBRARIES} GPUOpen::VulkanMemoryAllocator)
+
 #check for CMakeLists.txt files in subdirectory source (where your applications are)
 add_subdirectory(source)

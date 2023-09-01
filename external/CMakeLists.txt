@@ -4,3 +4,5 @@ add_library(imgui STATIC
 )
 
 add_subdirectory(vk-bootstrap)
+
+add_subdirectory(VulkanMemoryAllocator)

@@ -57,3 +57,4 @@ codeformat:
 clean:
 	rm -fr $(BUILD_DIR)/
 	find . -name "CMakeCache.txt" -exec rm {} \;
+	rm -fr $(EXTERNAL_DIR)/VulkanMemoryAllocator/build
