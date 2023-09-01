@@ -20,5 +20,8 @@ set(LIBRARIES ${LIBRARIES} ${SDL2_LIBRARIES})
 # ImGui
 include_directories(${EXTERNAL_DIR}/imgui)
 
+# STB
+include_directories(${EXTERNAL_DIR}/stb)
+
 #check for CMakeLists.txt files in subdirectory source (where your applications are)
 add_subdirectory(source)

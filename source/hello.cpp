@@ -4,6 +4,11 @@
 #include <SDL2/SDL.h>
 #include "imgui.h"
 
+#ifndef STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#endif
+
 int main() {
     // glm
     glm::vec3 hello{1, 1, 0};
@@ -20,6 +25,9 @@ int main() {
 
     // imgui
     ImGui::CreateContext();
+
+    // stb
+
 
     return 0;
 }
