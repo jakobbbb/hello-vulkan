@@ -18,8 +18,11 @@ build-tests: prepare-build
 download-external:
 	$(MAKE) -C $(EXTERNAL_DIR)
 
+compile_commands.json:
+	ln -s build/compile_commands.json .
+
 .PHONY: prepare-build
-prepare-build: download-external
+prepare-build: download-external compile_commands.json
 	[ -d "$(BUILD_DIR)" ] || mkdir $(BUILD_DIR)
 	cd $(BUILD_DIR) && cmake $(CMAKE_FLAGS) ..
 
