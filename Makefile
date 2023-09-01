@@ -53,3 +53,4 @@ codeformat:
 .PHONY: clean
 clean:
 	rm -fr $(BUILD_DIR)/
+	find . -name "CMakeCache.txt" -exec rm {} \;

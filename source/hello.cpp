@@ -2,6 +2,7 @@
 #include "glm/common.hpp"
 #include "glm/gtx/norm.hpp"
 #include <SDL2/SDL.h>
+#include "imgui.h"
 
 int main() {
     // glm
@@ -16,6 +17,9 @@ int main() {
         std::cerr << "Error initializing SDL2\n";
         return 1;
     }
+
+    // imgui
+    ImGui::CreateContext();
 
     return 0;
 }

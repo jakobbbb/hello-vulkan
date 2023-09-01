@@ -22,5 +22,4 @@
 
 build
 cmake_out
-external/*
-!external/Makefile
+external/glm
