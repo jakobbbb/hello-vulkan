@@ -10,7 +10,7 @@ Most dependencies are included as submodules, so please clone this repo with:
 ```
 git clone --recurse-submodules https://github.com/jakobbbb/hello-vulkan
 ```
-or run `git submodule update` after cloning.
+or run `git submodule init && git submodule update` after cloning.
 
 ## Building
 
