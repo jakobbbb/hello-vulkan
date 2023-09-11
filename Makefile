@@ -40,7 +40,7 @@ test: build-tests run-tests
 
 .PHONY: run
 run: build
-	$(BUILD_DIR)/source/hello
+	$(BUILD_DIR)/source/main
 
 .PHONY: lint
 lint:
