@@ -35,5 +35,9 @@ set(VulkanMemoryAllocator_DIR external/VulkanMemoryAllocator/build/install/share
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 set(LIBRARIES ${LIBRARIES} GPUOpen::VulkanMemoryAllocator)
 
+# vulkan
+find_package(Vulkan REQUIRED)
+set(LIBRARIES ${LIBRARIES} Vulkan::Vulkan)
+
 #check for CMakeLists.txt files in subdirectory source (where your applications are)
 add_subdirectory(source)
