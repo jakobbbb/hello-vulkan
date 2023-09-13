@@ -138,7 +138,17 @@ void Engine::init_commands() {
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
         .queueFamilyIndex = _gfx_queue_family,
     };
-
     VK_CHECK(vkCreateCommandPool(
         _device, &command_pool_info, nullptr, &_command_pool));
+
+    // create command buffer
+    VkCommandBufferAllocateInfo command_buffer_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .pNext = nullptr,
+        .commandPool = _command_pool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
+    };
+    VK_CHECK(
+        vkAllocateCommandBuffers(_device, &command_buffer_info, &_command_buf));
 }
