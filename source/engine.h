@@ -26,6 +26,12 @@ class Engine {
     std::vector<VkImage> _swapchain_imgs;
     std::vector<VkImageView> _swapchain_views;
 
+    // Command setup
+    VkQueue _gfx_queue;
+    uint32_t _gfx_queue_family;
+    VkCommandPool _command_pool;
+    VkCommandBuffer _command_buf;
+
     // Methods
     void init();
     void cleanup();
@@ -36,6 +42,7 @@ class Engine {
     void init_sdl();
     void init_vulkan();
     void init_swapchain();
+    void init_commands();
 };
 
 #endif  // ENGINE_H

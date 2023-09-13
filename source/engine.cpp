@@ -24,6 +24,9 @@ void Engine::init() {
     std::cout << "Initializing Swapchain...\n";
     init_swapchain();
 
+    std::cout << "Initializing Commands...\n";
+    init_commands();
+
     _is_initialized = true;  // happy day
 }
 
@@ -106,6 +109,10 @@ void Engine::init_vulkan() {
 
     _device = dev.device;
     _phys_device = dev.physical_device;
+
+    // get graphics queue
+    _gfx_queue = dev.get_queue(vkb::QueueType::graphics).value();
+    _gfx_queue_family = dev.get_queue_index(vkb::QueueType::graphics).value();
 }
 
 void Engine::init_swapchain() {
@@ -120,4 +127,18 @@ void Engine::init_swapchain() {
     _swapchain_imgs = swapchain.get_images().value();
     _swapchain_views = swapchain.get_image_views().value();
     _swapchain_format = swapchain.image_format;
+}
+
+void Engine::init_commands() {
+    // create command pool
+    VkCommandPoolCreateInfo command_pool_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .pNext = nullptr,
+        // allow resetting individual command buffers
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = _gfx_queue_family,
+    };
+
+    VK_CHECK(vkCreateCommandPool(
+        _device, &command_pool_info, nullptr, &_command_pool));
 }
