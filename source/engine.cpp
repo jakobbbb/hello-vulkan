@@ -28,6 +28,12 @@ void Engine::init() {
     std::cout << "Initializing Commands...\n";
     init_commands();
 
+    std::cout << "Initializing Default Renderpass...\n";
+    init_default_renderpass();
+
+    std::cout << "Initializing Framebuffers...\n";
+    init_framebuffers();
+
     _is_initialized = true;  // happy day
 }
 
@@ -146,3 +152,48 @@ void Engine::init_commands() {
     VK_CHECK(
         vkAllocateCommandBuffers(_device, &command_buffer_info, &_command_buf));
 }
+
+void Engine::init_default_renderpass() {
+    VkAttachmentDescription color_attachment = {
+        // format needed by swapchain
+        .format = _swapchain_format,
+        // no MSAA
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        // clear when attachment is loaded
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        // keep attachment stored when render pass ends
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        // don't care about stencil
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        // don't care about stencil
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        // don't care
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        // want to present at end
+        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+    };
+
+    VkAttachmentReference color_attachment_ref = {
+        .attachment = 0,
+        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    };
+
+    VkSubpassDescription subpass = {
+        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &color_attachment_ref,
+    };
+
+    VkRenderPassCreateInfo render_pass_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+        .attachmentCount = 1,
+        .pAttachments = &color_attachment,
+        .subpassCount = 1,
+        .pSubpasses = &subpass,
+    };
+
+    VK_CHECK(
+        vkCreateRenderPass(_device, &render_pass_info, nullptr, &_render_pass));
+}
+
+void Engine::init_framebuffers() {}

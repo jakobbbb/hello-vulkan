@@ -32,6 +32,10 @@ class Engine {
     VkCommandPool _command_pool;
     VkCommandBuffer _command_buf;
 
+    // Renderpass
+    VkRenderPass _render_pass;
+    std::vector<VkFramebuffer> _framebuffers;
+
     // Methods
     void init();
     void cleanup();
@@ -43,6 +47,8 @@ class Engine {
     void init_vulkan();
     void init_swapchain();
     void init_commands();
+    void init_default_renderpass();
+    void init_framebuffers();
 };
 
 #endif  // ENGINE_H
