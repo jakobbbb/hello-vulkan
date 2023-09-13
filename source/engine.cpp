@@ -94,7 +94,7 @@ void Engine::draw() {
 
     float flash = abs(sin(_frame_number / 120.f));
     VkClearValue clear = {
-        .color = {0.f, 0.f, flash, 1.f},
+        .color = {1.f - flash, 0.f, flash, 1.f},
     };
 
     VkRenderPassBeginInfo rp_info = {
@@ -112,6 +112,38 @@ void Engine::draw() {
     vkCmdBeginRenderPass(_command_buf, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdEndRenderPass(_command_buf);
     VK_CHECK(vkEndCommandBuffer(_command_buf));
+
+    // submit to queue
+    VkPipelineStageFlags wait_stage =
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkSubmitInfo submit = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext = nullptr,
+        // wait on _present_semaphore
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &_present_semaphore,
+        .pWaitDstStageMask = &wait_stage,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &_command_buf,
+        // signal _render_semaphore
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores = &_render_semaphore,
+    };
+    VK_CHECK(vkQueueSubmit(_gfx_queue, 1, &submit, _render_fence));
+
+    // presentation time
+    VkPresentInfoKHR present_info = {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .pNext = nullptr,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &_render_semaphore,
+        .swapchainCount = 1,
+        .pSwapchains = &_swapchain,
+        .pImageIndices = &swapchain_im_idx,
+    };
+    VK_CHECK(vkQueuePresentKHR(_gfx_queue, &present_info));
+
+    ++_frame_number;
 }
 
 void Engine::run() {
