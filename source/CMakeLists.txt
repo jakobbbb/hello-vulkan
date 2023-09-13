@@ -8,6 +8,7 @@ target_link_libraries(hello ${LIBRARIES})
 add_executable(main
     main.cpp
     engine.cpp
+    vk_init.cpp
 )
 
 target_link_libraries(main ${LIBRARIES})

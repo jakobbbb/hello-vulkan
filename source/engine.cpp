@@ -2,6 +2,7 @@
 #include <SDL.h>
 #include <SDL_vulkan.h>
 #include <iostream>
+#include "vk_init.h"
 
 #define APP_NAME "Vulkan Engine"
 
@@ -131,24 +132,14 @@ void Engine::init_swapchain() {
 
 void Engine::init_commands() {
     // create command pool
-    VkCommandPoolCreateInfo command_pool_info = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .pNext = nullptr,
-        // allow resetting individual command buffers
-        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = _gfx_queue_family,
-    };
+    auto command_pool_info = vkinit::command_pool_create_info(
+        _gfx_queue_family, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     VK_CHECK(vkCreateCommandPool(
         _device, &command_pool_info, nullptr, &_command_pool));
 
     // create command buffer
-    VkCommandBufferAllocateInfo command_buffer_info = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .pNext = nullptr,
-        .commandPool = _command_pool,
-        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = 1,
-    };
+    auto command_buffer_info =
+        vkinit::command_buffer_allocate_info(_command_pool);
     VK_CHECK(
         vkAllocateCommandBuffers(_device, &command_buffer_info, &_command_buf));
 }
