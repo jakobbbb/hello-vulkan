@@ -3,9 +3,7 @@
 #include <SDL_vulkan.h>
 #include <iostream>
 
-#ifndef APP_NAME
 #define APP_NAME "Vulkan Engine"
-#endif
 
 #define VK_CHECK(x)                                       \
     do {                                                  \

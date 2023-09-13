@@ -1,4 +1,3 @@
-#define APP_NAME "Hewwo :3"
 #include <iostream>
 #include "engine.h"
 
