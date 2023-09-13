@@ -47,8 +47,10 @@ void Engine::cleanup() {
 
     // swapchain
     vkDestroySwapchainKHR(_device, _swapchain, nullptr);
-    for (auto const& image_view : _swapchain_views) {
-        vkDestroyImageView(_device, image_view, nullptr);
+    vkDestroyRenderPass(_device, _render_pass, nullptr);
+    for (int i = 0; i < _framebuffers.size(); ++i) {
+        vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
+        vkDestroyImageView(_device, _swapchain_views[i], nullptr);
     }
 
     // vulkan stuff
@@ -196,4 +198,23 @@ void Engine::init_default_renderpass() {
         vkCreateRenderPass(_device, &render_pass_info, nullptr, &_render_pass));
 }
 
-void Engine::init_framebuffers() {}
+void Engine::init_framebuffers() {
+    VkFramebufferCreateInfo fb_info = {
+        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+        .pNext = nullptr,
+        .renderPass = _render_pass,
+        .attachmentCount = 1,
+        .width = _window_extent.width,
+        .height = _window_extent.height,
+        .layers = 1,
+    };
+
+    const uint32_t swapchain_image_count = _swapchain_imgs.size();
+    _framebuffers = std::vector<VkFramebuffer>(swapchain_image_count);
+
+    for (int i = 0; i < swapchain_image_count; ++i) {
+        fb_info.pAttachments = &_swapchain_views[i];
+        VK_CHECK(
+            vkCreateFramebuffer(_device, &fb_info, nullptr, &_framebuffers[i]));
+    }
+}
