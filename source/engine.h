@@ -36,6 +36,11 @@ class Engine {
     VkRenderPass _render_pass;
     std::vector<VkFramebuffer> _framebuffers;
 
+    // Sync structures
+    VkSemaphore _present_semaphore;
+    VkSemaphore _render_semaphore;
+    VkFence _render_fence;
+
     // Methods
     void init();
     void cleanup();
@@ -49,6 +54,7 @@ class Engine {
     void init_commands();
     void init_default_renderpass();
     void init_framebuffers();
+    void init_sync_structures();
 };
 
 #endif  // ENGINE_H

@@ -5,6 +5,7 @@
 #include "vk_init.h"
 
 #define APP_NAME "Vulkan Engine"
+#define TIMEOUT_SECOND 1000000000  // ns
 
 #define VK_CHECK(x)                                       \
     do {                                                  \
@@ -33,6 +34,9 @@ void Engine::init() {
 
     std::cout << "Initializing Framebuffers...\n";
     init_framebuffers();
+
+    std::cout << "Initializing Sync Structures...\n";
+    init_sync_structures();
 
     _is_initialized = true;  // happy day
 }
@@ -64,7 +68,50 @@ void Engine::cleanup() {
 }
 
 void Engine::draw() {
-    // TODO
+    VK_CHECK(
+        vkWaitForFences(_device, 1, &_render_fence, true, 1 * TIMEOUT_SECOND));
+    VK_CHECK(vkResetFences(_device, 1, &_render_fence));
+
+    // request image
+    uint32_t swapchain_im_idx;
+    VK_CHECK(vkAcquireNextImageKHR(_device,
+                                   _swapchain,
+                                   1 * TIMEOUT_SECOND,
+                                   _present_semaphore,
+                                   nullptr,
+                                   &swapchain_im_idx));
+
+    VK_CHECK(vkResetCommandBuffer(_command_buf, 0));
+    VkCommandBufferBeginInfo begin_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .pNext = nullptr,
+        // buf will only be submitted once and rerecorded every frame
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        .pInheritanceInfo = nullptr,  // no secondary cmd bufs
+    };
+    // start recording
+    VK_CHECK(vkBeginCommandBuffer(_command_buf, &begin_info));
+
+    float flash = abs(sin(_frame_number / 120.f));
+    VkClearValue clear = {
+        .color = {0.f, 0.f, flash, 1.f},
+    };
+
+    VkRenderPassBeginInfo rp_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        .pNext = nullptr,
+        .renderPass = _render_pass,
+        .framebuffer = _framebuffers[swapchain_im_idx],
+        .clearValueCount = 1,
+        .pClearValues = &clear,
+    };
+    rp_info.renderArea.offset.x = 0;
+    rp_info.renderArea.offset.y = 0;
+    rp_info.renderArea.extent = _window_extent;
+
+    vkCmdBeginRenderPass(_command_buf, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdEndRenderPass(_command_buf);
+    VK_CHECK(vkEndCommandBuffer(_command_buf));
 }
 
 void Engine::run() {
@@ -217,4 +264,24 @@ void Engine::init_framebuffers() {
         VK_CHECK(
             vkCreateFramebuffer(_device, &fb_info, nullptr, &_framebuffers[i]));
     }
+}
+
+void Engine::init_sync_structures() {
+    VkFenceCreateInfo fence_info = {
+        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+        .pNext = nullptr,
+        // allow to wait on fence before using it
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+    };
+    VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_render_fence));
+
+    VkSemaphoreCreateInfo sema_info = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+    };
+    VK_CHECK(
+        vkCreateSemaphore(_device, &sema_info, nullptr, &_present_semaphore));
+    VK_CHECK(
+        vkCreateSemaphore(_device, &sema_info, nullptr, &_render_semaphore));
 }
