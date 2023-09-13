@@ -36,6 +36,9 @@ void Engine::cleanup() {
         return;
     }
 
+    // command pool
+    vkDestroyCommandPool(_device, _command_pool, nullptr);
+
     // swapchain
     vkDestroySwapchainKHR(_device, _swapchain, nullptr);
     for (auto const& image_view : _swapchain_views) {
