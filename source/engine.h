@@ -41,6 +41,10 @@ class Engine {
     VkSemaphore _render_semaphore;
     VkFence _render_fence;
 
+    // Shader modules
+    VkShaderModule _tri_frag;
+    VkShaderModule _tri_vert;
+
     // Methods
     void init();
     void cleanup();
@@ -55,6 +59,8 @@ class Engine {
     void init_default_renderpass();
     void init_framebuffers();
     void init_sync_structures();
+    void init_pipelines();
+    bool load_shader_module(const char* file_path, VkShaderModule* out);
 };
 
 #endif  // ENGINE_H

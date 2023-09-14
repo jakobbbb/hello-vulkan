@@ -41,3 +41,4 @@ set(LIBRARIES ${LIBRARIES} Vulkan::Vulkan)
 
 #check for CMakeLists.txt files in subdirectory source (where your applications are)
 add_subdirectory(source)
+add_subdirectory(shaders)

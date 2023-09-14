@@ -1,6 +1,7 @@
 #include "engine.h"
 #include <SDL.h>
 #include <SDL_vulkan.h>
+#include <fstream>
 #include <iostream>
 #include "vk_init.h"
 
@@ -37,6 +38,9 @@ void Engine::init() {
 
     std::cout << "Initializing Sync Structures...\n";
     init_sync_structures();
+
+    std::cout << "Initializing Pipelines...\n";
+    init_pipelines();
 
     _is_initialized = true;  // happy day
 }
@@ -316,4 +320,48 @@ void Engine::init_sync_structures() {
         vkCreateSemaphore(_device, &sema_info, nullptr, &_present_semaphore));
     VK_CHECK(
         vkCreateSemaphore(_device, &sema_info, nullptr, &_render_semaphore));
+}
+
+bool Engine::load_shader_module(const char* file_path, VkShaderModule* out) {
+    std::ifstream file{file_path, std::ios::ate | std::ios::binary};
+
+    if (!file.is_open()) {
+        return false;
+    }
+
+    // load into buffer
+    size_t size = (size_t)file.tellg();
+    std::vector<uint32_t> buf(size / sizeof(uint32_t));
+    file.seekg(0);
+    file.read((char*)buf.data(), size);
+    file.close();
+
+    // load into Vulkan
+    VkShaderModuleCreateInfo create_info = {
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .pNext = nullptr,
+        .codeSize = buf.size() * sizeof(uint32_t),
+        .pCode = buf.data(),
+    };
+    VkShaderModule shader_module;
+    if (vkCreateShaderModule(_device, &create_info, nullptr, &shader_module) !=
+        VK_SUCCESS) {
+        return false;
+    }
+    *out = shader_module;
+    return true;
+}
+
+void Engine::init_pipelines() {
+    if (!load_shader_module("shaders/triangle.frag.spv", &_tri_frag)) {
+        std::cerr << "Loading frag shader failed\n";
+    } else {
+        std::cout << "Frag shader okay :)\n";
+    }
+
+    if (!load_shader_module("shaders/triangle.vert.spv", &_tri_vert)) {
+        std::cerr << "Loading vert shader failed\n";
+    } else {
+        std::cout << "Vert shader okay :)\n";
+    }
 }
