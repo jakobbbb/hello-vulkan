@@ -300,7 +300,7 @@ void Engine::init_framebuffers() {
 
 void Engine::init_sync_structures() {
     VkFenceCreateInfo fence_info = {
-        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .pNext = nullptr,
         // allow to wait on fence before using it
         .flags = VK_FENCE_CREATE_SIGNALED_BIT,
