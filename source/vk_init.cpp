@@ -26,3 +26,78 @@ VkCommandBufferAllocateInfo vkinit::command_buffer_allocate_info(
     };
     return command_buffer_info;
 }
+
+VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(
+    VkShaderStageFlagBits stage,
+    VkShaderModule shader_module) {
+    VkPipelineShaderStageCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .stage = stage,
+        .module = shader_module,
+        .pName = "main",  // entry point
+    };
+    return info;
+}
+
+VkPipelineVertexInputStateCreateInfo vkinit::vertex_input_state_create_info() {
+    VkPipelineVertexInputStateCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .vertexBindingDescriptionCount = 0,    // soon
+        .vertexAttributeDescriptionCount = 0,  // soon
+    };
+    return info;
+}
+
+VkPipelineInputAssemblyStateCreateInfo
+vkinit::vertex_input_assembly_create_info(VkPrimitiveTopology topology) {
+    VkPipelineInputAssemblyStateCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .topology = topology,  // tris, points, lines, ...
+        .primitiveRestartEnable = VK_FALSE,
+    };
+    return info;
+}
+
+VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(
+    VkPolygonMode polygon_mode) {
+    VkPipelineRasterizationStateCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .depthClampEnable = VK_FALSE,
+        .rasterizerDiscardEnable = VK_FALSE,  // would discard all primitives
+        .polygonMode = polygon_mode,
+        .cullMode = VK_CULL_MODE_NONE,
+        .frontFace = VK_FRONT_FACE_CLOCKWISE,
+        .depthBiasConstantFactor = 0.f,
+        .depthBiasClamp = 0.f,
+        .depthBiasSlopeFactor = 0.f,
+        .lineWidth = 1.f,
+    };
+    return info;
+}
+
+VkPipelineMultisampleStateCreateInfo vkinit::multisampling_state_create_info() {
+    // no MSAA
+    VkPipelineMultisampleStateCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+        .sampleShadingEnable = VK_FALSE,
+        .minSampleShading = 1.f,
+        .pSampleMask = nullptr,
+        .alphaToCoverageEnable = VK_FALSE,
+        .alphaToOneEnable = VK_FALSE,
+    };
+    return info;
+}
+VkPipelineColorBlendAttachmentState vkinit::color_blend_attachment_state() {
+    VkPipelineColorBlendAttachmentState att = {
+        .blendEnable = VK_FALSE,
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                          VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+    };
+    return att;
+}
