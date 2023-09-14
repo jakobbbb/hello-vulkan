@@ -6,7 +6,7 @@
 
 class PipelineBuilder {
     public:
-     std::vector<VkPipelineShaderStageCreateInfo> _staged;
+     std::vector<VkPipelineShaderStageCreateInfo> _stages;
      VkPipelineVertexInputStateCreateInfo _vert_input_info;
      VkPipelineInputAssemblyStateCreateInfo _input_assembly;
      VkViewport _viewport;
