@@ -30,6 +30,8 @@ VkPipelineMultisampleStateCreateInfo multisampling_state_create_info();
 
 VkPipelineColorBlendAttachmentState color_blend_attachment_state();
 
+VkPipelineLayoutCreateInfo pipeline_layout_create_info();
+
 }  // namespace vkinit
 
 #endif  // VK_INIT_H

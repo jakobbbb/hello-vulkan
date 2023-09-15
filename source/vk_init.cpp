@@ -93,6 +93,7 @@ VkPipelineMultisampleStateCreateInfo vkinit::multisampling_state_create_info() {
     };
     return info;
 }
+
 VkPipelineColorBlendAttachmentState vkinit::color_blend_attachment_state() {
     VkPipelineColorBlendAttachmentState att = {
         .blendEnable = VK_FALSE,
@@ -100,4 +101,17 @@ VkPipelineColorBlendAttachmentState vkinit::color_blend_attachment_state() {
                           VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
     };
     return att;
+}
+
+VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
+    VkPipelineLayoutCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .setLayoutCount = 0,  // no inputs (for now)
+        .pSetLayouts = nullptr,
+        .pushConstantRangeCount = 0,  // no inputs (for now)
+        .pPushConstantRanges = nullptr,
+    };
+    return info;
 }
