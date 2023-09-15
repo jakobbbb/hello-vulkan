@@ -7,6 +7,7 @@
 
 #define APP_NAME "Vulkan Engine"
 #define TIMEOUT_SECOND 1000000000  // ns
+#define SHADER_DIRECTORY "../shaders/"
 
 #define VK_CHECK(x)                                       \
     do {                                                  \
@@ -353,13 +354,13 @@ bool Engine::load_shader_module(const char* file_path, VkShaderModule* out) {
 }
 
 void Engine::init_pipelines() {
-    if (!load_shader_module("shaders/triangle.frag.spv", &_tri_frag)) {
+    if (!load_shader_module(SHADER_DIRECTORY "triangle.frag.spv", &_tri_frag)) {
         std::cerr << "Loading frag shader failed\n";
     } else {
         std::cout << "Frag shader okay :)\n";
     }
 
-    if (!load_shader_module("shaders/triangle.vert.spv", &_tri_vert)) {
+    if (!load_shader_module(SHADER_DIRECTORY "triangle.vert.spv", &_tri_vert)) {
         std::cerr << "Loading vert shader failed\n";
     } else {
         std::cout << "Vert shader okay :)\n";
