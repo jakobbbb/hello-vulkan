@@ -3,6 +3,7 @@
 #include <SDL_vulkan.h>
 #include <fstream>
 #include <iostream>
+#include "pipeline_builder.h"
 #include "vk_init.h"
 
 #define APP_NAME "Vulkan Engine"
@@ -115,7 +116,18 @@ void Engine::draw() {
     rp_info.renderArea.extent = _window_extent;
 
     vkCmdBeginRenderPass(_command_buf, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
+
+    vkCmdBindPipeline(
+        _command_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, _tri_pipeline);
+    vkCmdDraw(_command_buf,
+              3,  // vertex count
+              1,  // instance count
+              0,  // first vertex
+              0   // first instance
+    );
+
     vkCmdEndRenderPass(_command_buf);
+
     VK_CHECK(vkEndCommandBuffer(_command_buf));
 
     // submit to queue
@@ -354,15 +366,53 @@ bool Engine::load_shader_module(const char* file_path, VkShaderModule* out) {
 }
 
 void Engine::init_pipelines() {
+    // shaders
     if (!load_shader_module(SHADER_DIRECTORY "triangle.frag.spv", &_tri_frag)) {
         std::cerr << "Loading frag shader failed\n";
     } else {
         std::cout << "Frag shader okay :)\n";
     }
-
     if (!load_shader_module(SHADER_DIRECTORY "triangle.vert.spv", &_tri_vert)) {
         std::cerr << "Loading vert shader failed\n";
     } else {
         std::cout << "Vert shader okay :)\n";
     }
+    auto vert = vkinit::pipeline_shader_stage_create_info(
+        VK_SHADER_STAGE_VERTEX_BIT, _tri_vert);
+    auto frag = vkinit::pipeline_shader_stage_create_info(
+        VK_SHADER_STAGE_FRAGMENT_BIT, _tri_frag);
+
+    // Layout
+    VkPipelineLayoutCreateInfo layout_info =
+        vkinit::pipeline_layout_create_info();
+    VK_CHECK(vkCreatePipelineLayout(
+        _device, &layout_info, nullptr, &_tri_pipeline_layout));
+
+    // Pipeline
+    PipelineBuilder builder;
+    builder._stages.push_back(vert);
+    builder._stages.push_back(frag);
+    builder._vert_input_info =
+        vkinit::vertex_input_state_create_info();  // soon...
+    builder._input_assembly = vkinit::vertex_input_assembly_create_info(
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+
+    builder._viewport.x = 0.f;
+    builder._viewport.y = 0.f;
+    builder._viewport.width = _window_extent.width;
+    builder._viewport.height = _window_extent.height;
+    builder._viewport.minDepth = 0.f;
+    builder._viewport.maxDepth = 1.f;
+
+    builder._scissor.offset = {0, 0};
+    builder._scissor.extent = _window_extent;
+
+    builder._rasterizer =
+        vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
+
+    builder._multisampling = vkinit::multisampling_state_create_info();
+
+    builder._layout = _tri_pipeline_layout;
+
+    _tri_pipeline = builder.build_pipeline(_device, _render_pass);
 }

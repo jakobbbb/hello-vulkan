@@ -45,6 +45,10 @@ class Engine {
     VkShaderModule _tri_frag;
     VkShaderModule _tri_vert;
 
+    // Pipeline stuff
+    VkPipelineLayout _tri_pipeline_layout;
+    VkPipeline _tri_pipeline;
+
     // Methods
     void init();
     void cleanup();
