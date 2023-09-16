@@ -412,6 +412,8 @@ void Engine::init_pipelines() {
 
     builder._multisampling = vkinit::multisampling_state_create_info();
 
+    builder._color_blend_att = vkinit::color_blend_attachment_state();
+
     builder._layout = _tri_pipeline_layout;
 
     _tri_pipeline = builder.build_pipeline(_device, _render_pass);
