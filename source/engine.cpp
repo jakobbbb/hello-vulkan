@@ -117,8 +117,8 @@ void Engine::draw() {
 
     vkCmdBeginRenderPass(_command_buf, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(
-        _command_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, _tri_pipeline);
+    auto pipeline = (_selected_shader == 0) ? _tri_pipeline : _tri_rgb_pipeline;
+    vkCmdBindPipeline(_command_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
     vkCmdDraw(_command_buf,
               3,  // vertex count
               1,  // instance count
@@ -171,6 +171,12 @@ void Engine::run() {
         while (SDL_PollEvent(&ev) != 0) {
             if (ev.type == SDL_QUIT) {
                 run = false;
+            } else if (ev.type == SDL_KEYDOWN) {
+                switch (ev.key.keysym.sym) {
+                    case (SDLK_SPACE):
+                        _selected_shader ^= 1;
+                        break;
+                }
             }
         }
         draw();
@@ -335,10 +341,13 @@ void Engine::init_sync_structures() {
         vkCreateSemaphore(_device, &sema_info, nullptr, &_render_semaphore));
 }
 
-bool Engine::load_shader_module(const char* file_path, VkShaderModule* out) {
+bool Engine::try_load_shader_module(const char* file_path,
+                                    VkShaderModule* out) {
     std::ifstream file{file_path, std::ios::ate | std::ios::binary};
 
     if (!file.is_open()) {
+        std::cerr << "Loading shader '" << file_path << "' failed: "
+                  << "Could not open file\n ";
         return false;
     }
 
@@ -359,6 +368,7 @@ bool Engine::load_shader_module(const char* file_path, VkShaderModule* out) {
     VkShaderModule shader_module;
     if (vkCreateShaderModule(_device, &create_info, nullptr, &shader_module) !=
         VK_SUCCESS) {
+        std::cerr << "Loading shader '" << file_path << "' failed.";
         return false;
     }
     *out = shader_module;
@@ -367,20 +377,19 @@ bool Engine::load_shader_module(const char* file_path, VkShaderModule* out) {
 
 void Engine::init_pipelines() {
     // shaders
-    if (!load_shader_module(SHADER_DIRECTORY "triangle.frag.spv", &_tri_frag)) {
-        std::cerr << "Loading frag shader failed\n";
-    } else {
-        std::cout << "Frag shader okay :)\n";
-    }
-    if (!load_shader_module(SHADER_DIRECTORY "triangle.vert.spv", &_tri_vert)) {
-        std::cerr << "Loading vert shader failed\n";
-    } else {
-        std::cout << "Vert shader okay :)\n";
-    }
+    try_load_shader_module(SHADER_DIRECTORY "triangle.frag.spv", &_tri_frag);
+    try_load_shader_module(SHADER_DIRECTORY "triangle.vert.spv", &_tri_vert);
+    try_load_shader_module(SHADER_DIRECTORY "tri_rgb.frag.spv", &_tri_rgb_frag);
+    try_load_shader_module(SHADER_DIRECTORY "tri_rgb.vert.spv", &_tri_rgb_vert);
+
     auto vert = vkinit::pipeline_shader_stage_create_info(
         VK_SHADER_STAGE_VERTEX_BIT, _tri_vert);
     auto frag = vkinit::pipeline_shader_stage_create_info(
         VK_SHADER_STAGE_FRAGMENT_BIT, _tri_frag);
+    auto vert_rgb = vkinit::pipeline_shader_stage_create_info(
+        VK_SHADER_STAGE_VERTEX_BIT, _tri_rgb_vert);
+    auto frag_rgb = vkinit::pipeline_shader_stage_create_info(
+        VK_SHADER_STAGE_FRAGMENT_BIT, _tri_rgb_frag);
 
     // Layout
     VkPipelineLayoutCreateInfo layout_info =
@@ -417,4 +426,9 @@ void Engine::init_pipelines() {
     builder._layout = _tri_pipeline_layout;
 
     _tri_pipeline = builder.build_pipeline(_device, _render_pass);
+
+    builder._stages.clear();
+    builder._stages.push_back(vert_rgb);
+    builder._stages.push_back(frag_rgb);
+    _tri_rgb_pipeline = builder.build_pipeline(_device, _render_pass);
 }

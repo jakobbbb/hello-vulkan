@@ -9,6 +9,8 @@ class Engine {
     bool _is_initialized{false};
     int _frame_number{0};
 
+    int _selected_shader{0};
+
     VkExtent2D _window_extent{1280, 720};
 
     struct SDL_Window* _window{nullptr};
@@ -44,10 +46,13 @@ class Engine {
     // Shader modules
     VkShaderModule _tri_frag;
     VkShaderModule _tri_vert;
+    VkShaderModule _tri_rgb_frag;
+    VkShaderModule _tri_rgb_vert;
 
     // Pipeline stuff
     VkPipelineLayout _tri_pipeline_layout;
     VkPipeline _tri_pipeline;
+    VkPipeline _tri_rgb_pipeline;
 
     // Methods
     void init();
@@ -64,7 +69,7 @@ class Engine {
     void init_framebuffers();
     void init_sync_structures();
     void init_pipelines();
-    bool load_shader_module(const char* file_path, VkShaderModule* out);
+    bool try_load_shader_module(const char* file_path, VkShaderModule* out);
 };
 
 #endif  // ENGINE_H
