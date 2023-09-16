@@ -7,12 +7,16 @@ EXTERNAL_DIR = external
 CMAKE_FLAGS =
 
 .PHONY: build
-build: prepare-build
+build: prepare-build shaders
 	$(MAKE) -C $(BUILD_DIR)
 
 .PHONY: build-tests
 build-tests: prepare-build
 	$(MAKE) -C $(BUILD_DIR) tests
+
+.PHONY: shaders
+shaders:
+	$(MAKE) -C $(BUILD_DIR) shaders
 
 .PHONY: download-external
 download-external:
