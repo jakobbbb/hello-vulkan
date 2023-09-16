@@ -194,7 +194,7 @@ void Engine::init_vulkan() {
     vkb::InstanceBuilder inst_builder;
 
     auto res = inst_builder.set_app_name(APP_NAME)
-                   .request_validation_layers(true)
+                   .enable_validation_layers(true)
                    .require_api_version(1, 1, 0)
                    .use_default_debug_messenger()
                    .build();
