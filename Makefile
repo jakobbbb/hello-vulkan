@@ -15,7 +15,7 @@ build-tests: prepare-build
 	$(MAKE) -C $(BUILD_DIR) tests
 
 .PHONY: shaders
-shaders:
+shaders: prepare-build
 	$(MAKE) -C $(BUILD_DIR) shaders
 
 .PHONY: download-external
