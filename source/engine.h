@@ -69,6 +69,7 @@ class Engine {
     VkShaderModule _tri_vert;
     VkShaderModule _tri_rgb_frag;
     VkShaderModule _tri_rgb_vert;
+    VkShaderModule _tri_mesh_vert;
 
     // Pipeline stuff
     VkPipelineLayout _tri_pipeline_layout;

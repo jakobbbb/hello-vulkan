@@ -115,13 +115,21 @@ void Engine::draw() {
 
     vkCmdBeginRenderPass(_command_buf, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
 
-    auto pipeline = (_selected_shader == 0) ? _tri_pipeline : _tri_rgb_pipeline;
-    vkCmdBindPipeline(_command_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindPipeline(
+        _command_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, _mesh_pipeline);
+
+    VkDeviceSize offset = 0;
+    vkCmdBindVertexBuffers(_command_buf,
+                           0,  // first binding
+                           1,  // binding count
+                           &_tri_mesh.buf.buf,
+                           &offset);
+
     vkCmdDraw(_command_buf,
-              3,  // vertex count
-              1,  // instance count
-              0,  // first vertex
-              0   // first instance
+              _tri_mesh.verts.size(),  // vertex count
+              1,                       // instance count
+              0,                       // first vertex
+              0                        // first instance
     );
 
     vkCmdEndRenderPass(_command_buf);
@@ -393,6 +401,8 @@ void Engine::init_pipelines() {
     try_load_shader_module(SHADER_DIRECTORY "triangle.vert.spv", &_tri_vert);
     try_load_shader_module(SHADER_DIRECTORY "tri_rgb.frag.spv", &_tri_rgb_frag);
     try_load_shader_module(SHADER_DIRECTORY "tri_rgb.vert.spv", &_tri_rgb_vert);
+    try_load_shader_module(SHADER_DIRECTORY "tri_mesh.vert.spv",
+                           &_tri_mesh_vert);
 
     auto vert = vkinit::pipeline_shader_stage_create_info(
         VK_SHADER_STAGE_VERTEX_BIT, _tri_vert);
@@ -402,6 +412,8 @@ void Engine::init_pipelines() {
         VK_SHADER_STAGE_VERTEX_BIT, _tri_rgb_vert);
     auto frag_rgb = vkinit::pipeline_shader_stage_create_info(
         VK_SHADER_STAGE_FRAGMENT_BIT, _tri_rgb_frag);
+    auto vert_mesh = vkinit::pipeline_shader_stage_create_info(
+        VK_SHADER_STAGE_VERTEX_BIT, _tri_mesh_vert);
 
     // Layout
     VkPipelineLayoutCreateInfo layout_info =
@@ -444,14 +456,32 @@ void Engine::init_pipelines() {
     builder._stages.push_back(frag_rgb);
     _tri_rgb_pipeline = builder.build_pipeline(_device, _render_pass);
 
-    // pipeline created, so we can delete the shader modules
+    auto vert_desc = Vert::get_desc();
+    builder._vert_input_info.pVertexAttributeDescriptions =
+        vert_desc.attribs.data();
+    builder._vert_input_info.vertexAttributeDescriptionCount =
+        vert_desc.attribs.size();
+    builder._vert_input_info.pVertexBindingDescriptions =
+        vert_desc.bindings.data();
+    builder._vert_input_info.vertexBindingDescriptionCount =
+        vert_desc.bindings.size();
+
+    builder._stages.clear();
+    builder._stages.push_back(vert_mesh);
+    builder._stages.push_back(frag_rgb);
+
+    _mesh_pipeline = builder.build_pipeline(_device, _render_pass);
+
+    // pipelines created, so we can delete the shader modules
     vkDestroyShaderModule(_device, _tri_frag, nullptr);
     vkDestroyShaderModule(_device, _tri_vert, nullptr);
     vkDestroyShaderModule(_device, _tri_rgb_frag, nullptr);
     vkDestroyShaderModule(_device, _tri_rgb_vert, nullptr);
+    vkDestroyShaderModule(_device, _tri_mesh_vert, nullptr);
 
     ENQUEUE_DELETE(vkDestroyPipeline(_device, _tri_pipeline, nullptr));
     ENQUEUE_DELETE(vkDestroyPipeline(_device, _tri_rgb_pipeline, nullptr));
+    ENQUEUE_DELETE(vkDestroyPipeline(_device, _mesh_pipeline, nullptr));
     ENQUEUE_DELETE(
         vkDestroyPipelineLayout(_device, _tri_pipeline_layout, nullptr));
 }

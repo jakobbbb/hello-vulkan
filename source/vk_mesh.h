@@ -5,10 +5,18 @@
 #include <vector>
 #include "vk_types.h"
 
+struct VertInputDesc {
+    std::vector<VkVertexInputBindingDescription> bindings;
+    std::vector<VkVertexInputAttributeDescription> attribs;
+    VkPipelineVertexInputStateCreateFlags flags = 0;
+};
+
 struct Vert {
     glm::vec3 pos;
     glm::vec3 normal;
     glm::vec3 color;
+
+    static VertInputDesc get_desc();
 };
 
 struct Mesh {
