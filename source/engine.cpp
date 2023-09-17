@@ -6,6 +6,7 @@
 #include <iostream>
 #include "pipeline_builder.h"
 #include "vk_init.h"
+#include "vk_types.h"
 
 #define APP_NAME "Vulkan Engine"
 #define TIMEOUT_SECOND 1000000000  // ns
@@ -45,6 +46,9 @@ void Engine::init() {
 
     std::cout << "Initializing Pipelines...\n";
     init_pipelines();
+
+    std::cout << "Loading Meshes...\n";
+    load_meshes();
 
     _is_initialized = true;  // happy day
 }
@@ -450,4 +454,34 @@ void Engine::init_pipelines() {
     ENQUEUE_DELETE(vkDestroyPipeline(_device, _tri_rgb_pipeline, nullptr));
     ENQUEUE_DELETE(
         vkDestroyPipelineLayout(_device, _tri_pipeline_layout, nullptr));
+}
+
+void Engine::load_meshes() {
+    _tri_mesh = make_simple_triangle();
+    upload_mesh(_tri_mesh);
+}
+
+void Engine::upload_mesh(Mesh& mesh) {
+    auto buf_info = vkinit::buffer_create_info(
+        mesh._verts.size() * sizeof(Vert), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+
+    VmaAllocationCreateInfo alloc_info = {
+        .usage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+    };
+
+    // allocate
+    VK_CHECK(vmaCreateBuffer(_allocator,
+                             &buf_info,
+                             &alloc_info,
+                             &mesh._buf._buf,
+                             &mesh._buf._alloc,
+                             nullptr));
+    ENQUEUE_DELETE(
+        vmaDestroyBuffer(_allocator, mesh._buf._buf, mesh._buf._alloc));
+
+    // upload vertex data
+    void* data;
+    vmaMapMemory(_allocator, mesh._buf._alloc, &data);
+    memcpy(data, mesh._verts.data(), mesh._verts.size() * sizeof(Vert));
+    vmaUnmapMemory(_allocator, mesh._buf._alloc);  // write finished, so unmap
 }

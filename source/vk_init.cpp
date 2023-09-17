@@ -135,3 +135,14 @@ VkSemaphoreCreateInfo vkinit::semaphore_create_info(
     };
     return info;
 }
+
+VkBufferCreateInfo vkinit::buffer_create_info(size_t size,
+                                              VkBufferUsageFlags usage) {
+    VkBufferCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .pNext = nullptr,
+        .size = size,
+        .usage = usage,
+    };
+    return info;
+}

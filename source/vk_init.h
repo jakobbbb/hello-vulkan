@@ -36,6 +36,8 @@ VkFenceCreateInfo fence_create_info(VkFenceCreateFlags flags = 0);
 
 VkSemaphoreCreateInfo semaphore_create_info(VkSemaphoreCreateFlags flags = 0);
 
+VkBufferCreateInfo buffer_create_info(size_t size, VkBufferUsageFlags usage);
+
 }  // namespace vkinit
 
 #endif  // VK_INIT_H

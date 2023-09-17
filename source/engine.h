@@ -1,12 +1,13 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
-#include <vk_mem_alloc.h>
-
 #include <VkBootstrap.h>
+#include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 #include <deque>
 #include <functional>
+#include "vk_mesh.h"
+#include "vk_types.h"
 
 struct DeletionQueue {
     std::deque<std::function<void()>> deletors;
@@ -73,6 +74,9 @@ class Engine {
     VkPipelineLayout _tri_pipeline_layout;
     VkPipeline _tri_pipeline;
     VkPipeline _tri_rgb_pipeline;
+    VkPipeline _mesh_pipeline;
+
+    Mesh _tri_mesh;
 
     // Methods
     void init();
@@ -89,7 +93,11 @@ class Engine {
     void init_framebuffers();
     void init_sync_structures();
     void init_pipelines();
+
     bool try_load_shader_module(const char* file_path, VkShaderModule* out);
+
+    void load_meshes();
+    void upload_mesh(Mesh& mesh);
 };
 
 #endif  // ENGINE_H
