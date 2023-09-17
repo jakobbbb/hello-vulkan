@@ -12,8 +12,8 @@ struct Vert {
 };
 
 struct Mesh {
-    std::vector<Vert> _verts;
-    AllocatedBuffer _buf;
+    std::vector<Vert> verts;
+    AllocatedBuffer buf;
 };
 
 Mesh make_simple_triangle();

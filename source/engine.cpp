@@ -463,7 +463,7 @@ void Engine::load_meshes() {
 
 void Engine::upload_mesh(Mesh& mesh) {
     auto buf_info = vkinit::buffer_create_info(
-        mesh._verts.size() * sizeof(Vert), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        mesh.verts.size() * sizeof(Vert), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
     VmaAllocationCreateInfo alloc_info = {
         .usage = VMA_MEMORY_USAGE_CPU_TO_GPU,
@@ -473,15 +473,14 @@ void Engine::upload_mesh(Mesh& mesh) {
     VK_CHECK(vmaCreateBuffer(_allocator,
                              &buf_info,
                              &alloc_info,
-                             &mesh._buf._buf,
-                             &mesh._buf._alloc,
+                             &mesh.buf.buf,
+                             &mesh.buf.alloc,
                              nullptr));
-    ENQUEUE_DELETE(
-        vmaDestroyBuffer(_allocator, mesh._buf._buf, mesh._buf._alloc));
+    ENQUEUE_DELETE(vmaDestroyBuffer(_allocator, mesh.buf.buf, mesh.buf.alloc));
 
     // upload vertex data
     void* data;
-    vmaMapMemory(_allocator, mesh._buf._alloc, &data);
-    memcpy(data, mesh._verts.data(), mesh._verts.size() * sizeof(Vert));
-    vmaUnmapMemory(_allocator, mesh._buf._alloc);  // write finished, so unmap
+    vmaMapMemory(_allocator, mesh.buf.alloc, &data);
+    memcpy(data, mesh.verts.data(), mesh.verts.size() * sizeof(Vert));
+    vmaUnmapMemory(_allocator, mesh.buf.alloc);  // write finished, so unmap
 }

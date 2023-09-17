@@ -4,13 +4,13 @@
 #include <vulkan/vulkan.h>
 
 struct AllocatedBuffer {
-    VkBuffer _buf;
-    VmaAllocation _alloc;
+    VkBuffer buf;
+    VmaAllocation alloc;
 };
 
 struct AllocatedImage {
-    VkImage _img;
-    VmaAllocation _alloc;
+    VkImage img;
+    VmaAllocation alloc;
 };
 
 #define VK_TYPES_H
