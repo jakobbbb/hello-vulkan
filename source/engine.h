@@ -6,6 +6,7 @@
 #include <vulkan/vulkan.h>
 #include <deque>
 #include <functional>
+#include <glm/glm.hpp>
 #include "vk_mesh.h"
 #include "vk_types.h"
 
@@ -20,6 +21,11 @@ struct DeletionQueue {
             deletors.pop_back();
         }
     }
+};
+
+struct MeshPushConstants {
+    glm::vec4 data;
+    glm::mat4 render_matrix;
 };
 
 class Engine {
@@ -73,6 +79,7 @@ class Engine {
 
     // Pipeline stuff
     VkPipelineLayout _tri_pipeline_layout;
+    VkPipelineLayout _mesh_pipeline_layout;
     VkPipeline _tri_pipeline;
     VkPipeline _tri_rgb_pipeline;
     VkPipeline _mesh_pipeline;

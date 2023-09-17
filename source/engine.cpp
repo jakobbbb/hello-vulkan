@@ -3,6 +3,8 @@
 #include <SDL.h>
 #include <SDL_vulkan.h>
 #include <fstream>
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
 #include <iostream>
 #include "pipeline_builder.h"
 #include "vk_init.h"
@@ -113,6 +115,20 @@ void Engine::draw() {
     rp_info.renderArea.offset.y = 0;
     rp_info.renderArea.extent = _window_extent;
 
+    // camera, matrices
+    glm::vec3 cam_pos = {0.f, 0.f, -2.f};
+    glm::mat4 view = glm::translate(glm::mat4(1.f), cam_pos);
+    float aspect = (float)_window_extent.width / (float)_window_extent.height;
+    glm::mat4 proj = glm::perspective(glm::radians(70.f), aspect, 0.1f, 200.f);
+    proj[1][1] *= -1;
+    glm::mat4 model = glm::rotate(
+        glm::mat4{1.f}, glm::radians(_frame_number * 0.8f), glm::vec3(0, 1, 0));
+    glm::mat4 mesh_matrix = proj * view * model;
+
+    MeshPushConstants push_constants = {
+        .render_matrix = mesh_matrix,
+    };
+
     vkCmdBeginRenderPass(_command_buf, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(
@@ -124,6 +140,13 @@ void Engine::draw() {
                            1,  // binding count
                            &_tri_mesh.buf.buf,
                            &offset);
+
+    vkCmdPushConstants(_command_buf,
+                       _mesh_pipeline_layout,
+                       VK_SHADER_STAGE_VERTEX_BIT,
+                       0,
+                       sizeof(MeshPushConstants),
+                       &push_constants);
 
     vkCmdDraw(_command_buf,
               _tri_mesh.verts.size(),  // vertex count
@@ -415,11 +438,24 @@ void Engine::init_pipelines() {
     auto vert_mesh = vkinit::pipeline_shader_stage_create_info(
         VK_SHADER_STAGE_VERTEX_BIT, _tri_mesh_vert);
 
-    // Layout
+    // Layout (Tri)
     VkPipelineLayoutCreateInfo layout_info =
         vkinit::pipeline_layout_create_info();
     VK_CHECK(vkCreatePipelineLayout(
         _device, &layout_info, nullptr, &_tri_pipeline_layout));
+
+    // Layout (Mesh)
+    VkPipelineLayoutCreateInfo layout_info_mesh =
+        vkinit::pipeline_layout_create_info();
+    VkPushConstantRange push_constant = {
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        .offset = 0,
+        .size = sizeof(MeshPushConstants),
+    };
+    layout_info_mesh.pPushConstantRanges = &push_constant;
+    layout_info_mesh.pushConstantRangeCount = 1;
+    VK_CHECK(vkCreatePipelineLayout(
+        _device, &layout_info_mesh, nullptr, &_mesh_pipeline_layout));
 
     // Pipeline
     PipelineBuilder builder;
@@ -470,6 +506,7 @@ void Engine::init_pipelines() {
     builder._stages.push_back(vert_mesh);
     builder._stages.push_back(frag_rgb);
 
+    builder._layout = _mesh_pipeline_layout;
     _mesh_pipeline = builder.build_pipeline(_device, _render_pass);
 
     // pipelines created, so we can delete the shader modules
@@ -484,6 +521,8 @@ void Engine::init_pipelines() {
     ENQUEUE_DELETE(vkDestroyPipeline(_device, _mesh_pipeline, nullptr));
     ENQUEUE_DELETE(
         vkDestroyPipelineLayout(_device, _tri_pipeline_layout, nullptr));
+    ENQUEUE_DELETE(
+        vkDestroyPipelineLayout(_device, _mesh_pipeline_layout, nullptr));
 }
 
 void Engine::load_meshes() {
