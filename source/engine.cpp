@@ -1,3 +1,4 @@
+#define VMA_IMPLEMENTATION
 #include "engine.h"
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -220,6 +221,15 @@ void Engine::init_vulkan() {
     // get graphics queue
     _gfx_queue = dev.get_queue(vkb::QueueType::graphics).value();
     _gfx_queue_family = dev.get_queue_index(vkb::QueueType::graphics).value();
+
+    // allocator
+    VmaAllocatorCreateInfo allocator_info = {
+        .physicalDevice = _phys_device,
+        .device = _device,
+        .instance = _instance,
+    };
+    vmaCreateAllocator(&allocator_info, &_allocator);
+    ENQUEUE_DELETE(vmaDestroyAllocator(_allocator));
 }
 
 void Engine::init_swapchain() {

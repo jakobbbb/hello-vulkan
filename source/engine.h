@@ -1,6 +1,8 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
+#include <vk_mem_alloc.h>
+
 #include <VkBootstrap.h>
 #include <vulkan/vulkan.h>
 #include <deque>
@@ -27,8 +29,9 @@ class Engine {
     int _selected_shader{0};
 
     VkExtent2D _window_extent{1280, 720};
-
     struct SDL_Window* _window{nullptr};
+
+    VmaAllocator _allocator;
 
     DeletionQueue _del_queue;
 
