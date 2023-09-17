@@ -3,6 +3,21 @@
 
 #include <VkBootstrap.h>
 #include <vulkan/vulkan.h>
+#include <deque>
+#include <functional>
+
+struct DeletionQueue {
+    std::deque<std::function<void()>> deletors;
+
+    void push(std::function<void()>&& f) { deletors.push_back(f); }
+
+    void flush() {
+        while (!deletors.empty()) {
+            (*deletors.rbegin())();
+            deletors.pop_back();
+        }
+    }
+};
 
 class Engine {
    public:
@@ -14,6 +29,8 @@ class Engine {
     VkExtent2D _window_extent{1280, 720};
 
     struct SDL_Window* _window{nullptr};
+
+    DeletionQueue _del_queue;
 
     // Vulkan Init
     VkInstance _instance;

@@ -18,6 +18,7 @@
             abort();                                      \
         }                                                 \
     } while (0)
+#define ENQUEUE_DELETE(x) _del_queue.push([=]() { x; })
 
 void Engine::init() {
     std::cout << "Initializing SDL...\n";
@@ -52,16 +53,8 @@ void Engine::cleanup() {
         return;
     }
 
-    // command pool
-    vkDestroyCommandPool(_device, _command_pool, nullptr);
-
-    // swapchain
-    vkDestroySwapchainKHR(_device, _swapchain, nullptr);
-    vkDestroyRenderPass(_device, _render_pass, nullptr);
-    for (int i = 0; i < _framebuffers.size(); ++i) {
-        vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
-        vkDestroyImageView(_device, _swapchain_views[i], nullptr);
-    }
+    vkWaitForFences(_device, 1, &_render_fence, true, 1 * TIMEOUT_SECOND);
+    _del_queue.flush();
 
     // vulkan stuff
     vkDestroyDevice(_device, nullptr);
@@ -241,6 +234,8 @@ void Engine::init_swapchain() {
     _swapchain_imgs = swapchain.get_images().value();
     _swapchain_views = swapchain.get_image_views().value();
     _swapchain_format = swapchain.image_format;
+
+    ENQUEUE_DELETE(vkDestroySwapchainKHR(_device, _swapchain, nullptr));
 }
 
 void Engine::init_commands() {
@@ -255,6 +250,8 @@ void Engine::init_commands() {
         vkinit::command_buffer_allocate_info(_command_pool);
     VK_CHECK(
         vkAllocateCommandBuffers(_device, &command_buffer_info, &_command_buf));
+
+    ENQUEUE_DELETE(vkDestroyCommandPool(_device, _command_pool, nullptr));
 }
 
 void Engine::init_default_renderpass() {
@@ -298,6 +295,8 @@ void Engine::init_default_renderpass() {
 
     VK_CHECK(
         vkCreateRenderPass(_device, &render_pass_info, nullptr, &_render_pass));
+
+    ENQUEUE_DELETE(vkDestroyRenderPass(_device, _render_pass, nullptr));
 }
 
 void Engine::init_framebuffers() {
@@ -318,27 +317,26 @@ void Engine::init_framebuffers() {
         fb_info.pAttachments = &_swapchain_views[i];
         VK_CHECK(
             vkCreateFramebuffer(_device, &fb_info, nullptr, &_framebuffers[i]));
+
+        ENQUEUE_DELETE({
+            vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
+            vkDestroyImageView(_device, _swapchain_views[i], nullptr);
+        });
     }
 }
 
 void Engine::init_sync_structures() {
-    VkFenceCreateInfo fence_info = {
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .pNext = nullptr,
-        // allow to wait on fence before using it
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
-    };
+    auto fence_info = vkinit::fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
     VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_render_fence));
+    ENQUEUE_DELETE(vkDestroyFence(_device, _render_fence, nullptr));
 
-    VkSemaphoreCreateInfo sema_info = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-    };
+    auto sema_info = vkinit::semaphore_create_info();
     VK_CHECK(
         vkCreateSemaphore(_device, &sema_info, nullptr, &_present_semaphore));
     VK_CHECK(
         vkCreateSemaphore(_device, &sema_info, nullptr, &_render_semaphore));
+    ENQUEUE_DELETE(vkDestroySemaphore(_device, _present_semaphore, nullptr));
+    ENQUEUE_DELETE(vkDestroySemaphore(_device, _render_semaphore, nullptr));
 }
 
 bool Engine::try_load_shader_module(const char* file_path,
@@ -431,4 +429,15 @@ void Engine::init_pipelines() {
     builder._stages.push_back(vert_rgb);
     builder._stages.push_back(frag_rgb);
     _tri_rgb_pipeline = builder.build_pipeline(_device, _render_pass);
+
+    // pipeline created, so we can delete the shader modules
+    vkDestroyShaderModule(_device, _tri_frag, nullptr);
+    vkDestroyShaderModule(_device, _tri_vert, nullptr);
+    vkDestroyShaderModule(_device, _tri_rgb_frag, nullptr);
+    vkDestroyShaderModule(_device, _tri_rgb_vert, nullptr);
+
+    ENQUEUE_DELETE(vkDestroyPipeline(_device, _tri_pipeline, nullptr));
+    ENQUEUE_DELETE(vkDestroyPipeline(_device, _tri_rgb_pipeline, nullptr));
+    ENQUEUE_DELETE(
+        vkDestroyPipelineLayout(_device, _tri_pipeline_layout, nullptr));
 }
