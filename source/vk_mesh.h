@@ -5,6 +5,8 @@
 #include <vector>
 #include "vk_types.h"
 
+#define ASSETS_DIRECTORY "../../assets/"
+
 struct VertInputDesc {
     std::vector<VkVertexInputBindingDescription> bindings;
     std::vector<VkVertexInputAttributeDescription> attribs;
@@ -22,8 +24,8 @@ struct Vert {
 struct Mesh {
     std::vector<Vert> verts;
     AllocatedBuffer buf;
+    static Mesh make_simple_triangle();
+    static Mesh load_from_obj(const char* file_path);
 };
-
-Mesh make_simple_triangle();
 
 #endif  // VK_MESH_H

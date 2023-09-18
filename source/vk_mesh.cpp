@@ -1,4 +1,6 @@
 #include "vk_mesh.h"
+#include <tiny_obj_loader.h>
+#include <iostream>
 
 VertInputDesc Vert::get_desc() {
     VkVertexInputBindingDescription main_binding = {
@@ -31,7 +33,7 @@ VertInputDesc Vert::get_desc() {
     };
 }
 
-Mesh make_simple_triangle() {
+Mesh Mesh::make_simple_triangle() {
     return Mesh{.verts = {
                     {
                         .pos = {1, 1, 0},
@@ -46,4 +48,55 @@ Mesh make_simple_triangle() {
                         .color = {1, 0, 0},
                     },
                 }};
+}
+
+Mesh Mesh::load_from_obj(const char* file_path) {
+    tinyobj::attrib_t attrib;  // vertex arrays
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+
+    std::string warn;
+    std::string err;
+
+    tinyobj::LoadObj(
+        &attrib, &shapes, &materials, &warn, &err, file_path, ASSETS_DIRECTORY);
+
+    if (!warn.empty()) {
+        std::cerr << "Warning loading mesh '" << file_path << "': " << warn
+                  << "\n";
+    }
+    if (!err.empty()) {
+        std::cerr << "Error loading mesh '" << file_path << "': " << err
+                  << "\n";
+        return make_simple_triangle();
+    }
+
+    Mesh m{};
+    size_t idx_offset = 0;
+    for (auto shape : shapes) {
+        for (auto vert_count : shape.mesh.num_face_vertices) {
+            int fv = 3;  // only tris for now
+            for (size_t v = 0; v < fv; ++v) {
+                auto idx = shape.mesh.indices[idx_offset + v];
+                // pos
+                auto vx = attrib.vertices[fv * idx.vertex_index + 0];
+                auto vy = attrib.vertices[fv * idx.vertex_index + 1];
+                auto vz = attrib.vertices[fv * idx.vertex_index + 2];
+                // normal
+                auto nx = attrib.normals[fv * idx.normal_index + 0];
+                auto ny = attrib.normals[fv * idx.normal_index + 1];
+                auto nz = attrib.normals[fv * idx.normal_index + 2];
+
+                Vert vert{
+                    .pos = {vx, vy, vz},
+                    .normal = {nx, ny, nz},
+                };
+                vert.color = vert.normal;
+                m.verts.push_back(vert);
+            }
+            idx_offset += fv;
+        }
+    }
+
+    return m;
 }

@@ -526,8 +526,9 @@ void Engine::init_pipelines() {
 }
 
 void Engine::load_meshes() {
-    _tri_mesh = make_simple_triangle();
+    _tri_mesh = Mesh::make_simple_triangle();
     upload_mesh(_tri_mesh);
+    _monkey_mesh = Mesh::load_from_obj(ASSETS_DIRECTORY "monkey.obj");
 }
 
 void Engine::upload_mesh(Mesh& mesh) {

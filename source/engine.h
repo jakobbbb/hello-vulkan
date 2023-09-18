@@ -85,6 +85,7 @@ class Engine {
     VkPipeline _mesh_pipeline;
 
     Mesh _tri_mesh;
+    Mesh _monkey_mesh;
 
     // Methods
     void init();
