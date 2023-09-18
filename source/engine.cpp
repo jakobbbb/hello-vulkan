@@ -135,10 +135,11 @@ void Engine::draw() {
         _command_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, _mesh_pipeline);
 
     VkDeviceSize offset = 0;
+    Mesh mesh = _monkey_mesh;
     vkCmdBindVertexBuffers(_command_buf,
                            0,  // first binding
                            1,  // binding count
-                           &_tri_mesh.buf.buf,
+                           &mesh.buf.buf,
                            &offset);
 
     vkCmdPushConstants(_command_buf,
@@ -149,10 +150,10 @@ void Engine::draw() {
                        &push_constants);
 
     vkCmdDraw(_command_buf,
-              _tri_mesh.verts.size(),  // vertex count
-              1,                       // instance count
-              0,                       // first vertex
-              0                        // first instance
+              mesh.verts.size(),  // vertex count
+              1,                  // instance count
+              0,                  // first vertex
+              0                   // first instance
     );
 
     vkCmdEndRenderPass(_command_buf);
@@ -529,6 +530,7 @@ void Engine::load_meshes() {
     _tri_mesh = Mesh::make_simple_triangle();
     upload_mesh(_tri_mesh);
     _monkey_mesh = Mesh::load_from_obj(ASSETS_DIRECTORY "monkey.obj");
+    upload_mesh(_monkey_mesh);
 }
 
 void Engine::upload_mesh(Mesh& mesh) {
