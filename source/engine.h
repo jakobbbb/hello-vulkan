@@ -55,6 +55,11 @@ class Engine {
     std::vector<VkImage> _swapchain_imgs;
     std::vector<VkImageView> _swapchain_views;
 
+    // Depth bufer
+    VkImageView _depth_view;
+    AllocatedImage _depth_img;
+    VkFormat _depth_format;
+
     // Command setup
     VkQueue _gfx_queue;
     uint32_t _gfx_queue_family;

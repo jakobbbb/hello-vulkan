@@ -146,3 +146,43 @@ VkBufferCreateInfo vkinit::buffer_create_info(size_t size,
     };
     return info;
 }
+VkImageCreateInfo vkinit::image_create_info(VkFormat format,
+                                            VkImageUsageFlags flags,
+                                            VkExtent3D extent) {
+    VkImageCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = format,
+        .extent = extent,
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,  // how image is in gpu memory.
+                                            // linear would allow cpu to r/w,
+                                            // but it's slower
+        .usage = flags,
+    };
+    return info;
+}
+
+VkImageViewCreateInfo vkinit::imageview_create_info(VkFormat format,
+                                                    VkImage image,
+                                                    VkImageAspectFlags flags) {
+    VkImageSubresourceRange sub_range = {
+        .aspectMask = flags,
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 1,
+    };
+    VkImageViewCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .image = image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = format,
+        .subresourceRange = sub_range,
+    };
+    return info;
+}

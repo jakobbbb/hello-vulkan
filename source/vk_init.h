@@ -38,6 +38,14 @@ VkSemaphoreCreateInfo semaphore_create_info(VkSemaphoreCreateFlags flags = 0);
 
 VkBufferCreateInfo buffer_create_info(size_t size, VkBufferUsageFlags usage);
 
+VkImageCreateInfo image_create_info(VkFormat format,
+                                    VkImageUsageFlags flags,
+                                    VkExtent3D extent);
+
+VkImageViewCreateInfo imageview_create_info(VkFormat format,
+                                            VkImage image,
+                                            VkImageAspectFlags flags);
+
 }  // namespace vkinit
 
 #endif  // VK_INIT_H
