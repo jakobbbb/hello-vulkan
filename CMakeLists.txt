@@ -25,7 +25,6 @@ include_directories(${EXTERNAL_DIR}/stb)
 
 # tinyobjloader
 include_directories(${EXTERNAL_DIR}/tinyobjloader)
-set(LIBRARIES ${LIBRARIES} tinyobjloader)
 
 # vk-bootstrap
 include_directories(${EXTERNAL_DIR}/vk-bootstrap)
