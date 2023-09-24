@@ -15,6 +15,7 @@ class PipelineBuilder {
     VkPipelineColorBlendAttachmentState _color_blend_att;
     VkPipelineMultisampleStateCreateInfo _multisampling;
     VkPipelineLayout _layout;
+    VkPipelineDepthStencilStateCreateInfo _depth_stencil;
 
     VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
 };

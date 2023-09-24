@@ -177,12 +177,27 @@ VkImageViewCreateInfo vkinit::imageview_create_info(VkFormat format,
         .layerCount = 1,
     };
     VkImageViewCreateInfo info = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .pNext = nullptr,
         .image = image,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
         .format = format,
         .subresourceRange = sub_range,
+    };
+    return info;
+}
+
+VkPipelineDepthStencilStateCreateInfo
+vkinit::depth_stencil_create_info(bool test, bool write, VkCompareOp compare) {
+    VkPipelineDepthStencilStateCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .depthTestEnable = test ? VK_TRUE : VK_FALSE,
+        .depthWriteEnable = write ? VK_TRUE : VK_FALSE,
+        .depthCompareOp = test ? compare : VK_COMPARE_OP_ALWAYS,
+        .stencilTestEnable = VK_FALSE,
+        .minDepthBounds = 0.0f,  // optional
+        .maxDepthBounds = 1.0f,  // optional
     };
     return info;
 }

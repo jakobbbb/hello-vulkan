@@ -103,13 +103,18 @@ void Engine::draw() {
         .color = {1.f - flash, 0.f, flash, 1.f},
     };
 
+    VkClearValue depth_clear;
+    depth_clear.depthStencil.depth = 1.f;
+
+    VkClearValue clears[2] = {clear, depth_clear};
+
     VkRenderPassBeginInfo rp_info = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .pNext = nullptr,
         .renderPass = _render_pass,
         .framebuffer = _framebuffers[swapchain_im_idx],
-        .clearValueCount = 1,
-        .pClearValues = &clear,
+        .clearValueCount = 2,
+        .pClearValues = &clears[0],
     };
     rp_info.renderArea.offset.x = 0;
     rp_info.renderArea.offset.y = 0;
@@ -282,6 +287,35 @@ void Engine::init_swapchain() {
     _swapchain_format = swapchain.image_format;
 
     ENQUEUE_DELETE(vkDestroySwapchainKHR(_device, _swapchain, nullptr));
+
+    // depth buffer
+    VkExtent3D depth_ext = {
+        _window_extent.width,
+        _window_extent.height,
+        1,
+    };
+    _depth_format = VK_FORMAT_D32_SFLOAT;
+    auto depth_img_info = vkinit::image_create_info(
+        _depth_format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depth_ext);
+    VmaAllocationCreateInfo depth_alloc_info = {
+        .usage = VMA_MEMORY_USAGE_GPU_ONLY,
+        // ensure image is in GPU memory
+        .requiredFlags =
+            VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+    };
+    vmaCreateImage(_allocator,
+                   &depth_img_info,
+                   &depth_alloc_info,
+                   &_depth_img.img,
+                   &_depth_img.alloc,
+                   nullptr);
+    auto depth_view_info = vkinit::imageview_create_info(
+        _depth_format, _depth_img.img, VK_IMAGE_ASPECT_DEPTH_BIT);
+    VK_CHECK(
+        vkCreateImageView(_device, &depth_view_info, nullptr, &_depth_view));
+    ENQUEUE_DELETE(vkDestroyImageView(_device, _depth_view, nullptr));
+    ENQUEUE_DELETE(
+        vmaDestroyImage(_allocator, _depth_img.img, _depth_img.alloc));
 }
 
 void Engine::init_commands() {
@@ -325,18 +359,62 @@ void Engine::init_default_renderpass() {
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     };
 
+    // depth buffer
+    VkAttachmentDescription depth_attachment = {
+        .format = _depth_format,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    };
+
+    VkAttachmentReference depth_attachment_ref = {
+        .attachment = 1,
+        .layout = depth_attachment.finalLayout,
+    };
+
+    VkAttachmentDescription attachments[2] = {color_attachment,
+                                              depth_attachment};
+
     VkSubpassDescription subpass = {
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .colorAttachmentCount = 1,
         .pColorAttachments = &color_attachment_ref,
+        // hook depth attachment
+        .pDepthStencilAttachment = &depth_attachment_ref,
     };
+
+    VkSubpassDependency dep = {
+        .srcSubpass = VK_SUBPASS_EXTERNAL,
+        .dstSubpass = 0,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .srcAccessMask = 0,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+    };
+    VkSubpassDependency depth_dep = {
+        .srcSubpass = VK_SUBPASS_EXTERNAL,
+        .dstSubpass = 0,
+        .srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                        VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                        VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+        .srcAccessMask = 0,
+        .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+    };
+    VkSubpassDependency deps[2] = {dep, depth_dep};
 
     VkRenderPassCreateInfo render_pass_info = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-        .attachmentCount = 1,
-        .pAttachments = &color_attachment,
+        .attachmentCount = 2,
+        .pAttachments = &attachments[0],
         .subpassCount = 1,
         .pSubpasses = &subpass,
+        .dependencyCount = 2,
+        .pDependencies = &deps[0],
     };
 
     VK_CHECK(
@@ -360,7 +438,9 @@ void Engine::init_framebuffers() {
     _framebuffers = std::vector<VkFramebuffer>(swapchain_image_count);
 
     for (int i = 0; i < swapchain_image_count; ++i) {
-        fb_info.pAttachments = &_swapchain_views[i];
+        VkImageView attachments[2] = {_swapchain_views[i], _depth_view};
+        fb_info.attachmentCount = 2;
+        fb_info.pAttachments = &attachments[0];
         VK_CHECK(
             vkCreateFramebuffer(_device, &fb_info, nullptr, &_framebuffers[i]));
 
@@ -460,6 +540,8 @@ void Engine::init_pipelines() {
 
     // Pipeline
     PipelineBuilder builder;
+    builder._depth_stencil = vkinit::depth_stencil_create_info(
+        true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
     builder._stages.push_back(vert);
     builder._stages.push_back(frag);
     builder._vert_input_info =

@@ -46,6 +46,9 @@ VkImageViewCreateInfo imageview_create_info(VkFormat format,
                                             VkImage image,
                                             VkImageAspectFlags flags);
 
+VkPipelineDepthStencilStateCreateInfo
+depth_stencil_create_info(bool test, bool write, VkCompareOp compare);
+
 }  // namespace vkinit
 
 #endif  // VK_INIT_H
