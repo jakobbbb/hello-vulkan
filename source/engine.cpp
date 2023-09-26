@@ -2,6 +2,7 @@
 #include "engine.h"
 #include <SDL.h>
 #include <SDL_vulkan.h>
+#include <chrono>
 #include <fstream>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -183,7 +184,12 @@ void Engine::run() {
                 }
             }
         }
+        auto start = std::chrono::high_resolution_clock::now();
         draw();
+        auto end = std::chrono::high_resolution_clock::now();
+        auto ms =
+            std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        std::cout << ms.count() / 1000.f << " ms\n";
     }
 }
 
