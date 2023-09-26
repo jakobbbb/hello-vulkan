@@ -64,7 +64,10 @@ void Engine::cleanup() {
         return;
     }
 
-    vkWaitForFences(_device, 1, &_render_fence, true, 1 * TIMEOUT_SECOND);
+    for (int i = 0; i < FRAME_OVERLAP; ++i) {
+        vkWaitForFences(
+            _device, 1, &_frames[i].render_fence, true, 1 * TIMEOUT_SECOND);
+    }
     _del_queue.flush();
 
     // vulkan stuff
@@ -78,20 +81,21 @@ void Engine::cleanup() {
 }
 
 void Engine::draw() {
+    auto f = get_current_frame();
     VK_CHECK(
-        vkWaitForFences(_device, 1, &_render_fence, true, 1 * TIMEOUT_SECOND));
-    VK_CHECK(vkResetFences(_device, 1, &_render_fence));
+        vkWaitForFences(_device, 1, &f.render_fence, true, 1 * TIMEOUT_SECOND));
+    VK_CHECK(vkResetFences(_device, 1, &f.render_fence));
 
     // request image
     uint32_t swapchain_im_idx;
     VK_CHECK(vkAcquireNextImageKHR(_device,
                                    _swapchain,
                                    1 * TIMEOUT_SECOND,
-                                   _present_semaphore,
+                                   f.present_semaphore,
                                    nullptr,
                                    &swapchain_im_idx));
 
-    VK_CHECK(vkResetCommandBuffer(_command_buf, 0));
+    VK_CHECK(vkResetCommandBuffer(f.cmd, 0));
     VkCommandBufferBeginInfo begin_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .pNext = nullptr,
@@ -100,7 +104,7 @@ void Engine::draw() {
         .pInheritanceInfo = nullptr,  // no secondary cmd bufs
     };
     // start recording
-    VK_CHECK(vkBeginCommandBuffer(_command_buf, &begin_info));
+    VK_CHECK(vkBeginCommandBuffer(f.cmd, &begin_info));
 
     float flash = abs(sin(_frame_number / 120.f));
     VkClearValue clear = {
@@ -129,11 +133,11 @@ void Engine::draw() {
     _scene[0].transform = glm::scale(
         glm::translate(spin, glm::vec3{0.f, 5.f, 0.f}), glm::vec3(5.f));
 
-    vkCmdBeginRenderPass(_command_buf, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
-    draw_objects(_command_buf, _scene);
-    vkCmdEndRenderPass(_command_buf);
+    vkCmdBeginRenderPass(f.cmd, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
+    draw_objects(f.cmd, _scene);
+    vkCmdEndRenderPass(f.cmd);
 
-    VK_CHECK(vkEndCommandBuffer(_command_buf));
+    VK_CHECK(vkEndCommandBuffer(f.cmd));
 
     // submit to queue
     VkPipelineStageFlags wait_stage =
@@ -143,22 +147,22 @@ void Engine::draw() {
         .pNext = nullptr,
         // wait on _present_semaphore
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &_present_semaphore,
+        .pWaitSemaphores = &f.present_semaphore,
         .pWaitDstStageMask = &wait_stage,
         .commandBufferCount = 1,
-        .pCommandBuffers = &_command_buf,
+        .pCommandBuffers = &f.cmd,
         // signal _render_semaphore
         .signalSemaphoreCount = 1,
-        .pSignalSemaphores = &_render_semaphore,
+        .pSignalSemaphores = &f.render_semaphore,
     };
-    VK_CHECK(vkQueueSubmit(_gfx_queue, 1, &submit, _render_fence));
+    VK_CHECK(vkQueueSubmit(_gfx_queue, 1, &submit, f.render_fence));
 
     // presentation time
     VkPresentInfoKHR present_info = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .pNext = nullptr,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &_render_semaphore,
+        .pWaitSemaphores = &f.render_semaphore,
         .swapchainCount = 1,
         .pSwapchains = &_swapchain,
         .pImageIndices = &swapchain_im_idx,
@@ -297,16 +301,20 @@ void Engine::init_commands() {
     // create command pool
     auto command_pool_info = vkinit::command_pool_create_info(
         _gfx_queue_family, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-    VK_CHECK(vkCreateCommandPool(
-        _device, &command_pool_info, nullptr, &_command_pool));
 
-    // create command buffer
-    auto command_buffer_info =
-        vkinit::command_buffer_allocate_info(_command_pool);
-    VK_CHECK(
-        vkAllocateCommandBuffers(_device, &command_buffer_info, &_command_buf));
+    for (int i = 0; i < FRAME_OVERLAP; ++i) {
+        VK_CHECK(vkCreateCommandPool(
+            _device, &command_pool_info, nullptr, &_frames[i].command_pool));
 
-    ENQUEUE_DELETE(vkDestroyCommandPool(_device, _command_pool, nullptr));
+        // create command buffer
+        auto command_buffer_info =
+            vkinit::command_buffer_allocate_info(_frames[i].command_pool);
+        VK_CHECK(vkAllocateCommandBuffers(
+            _device, &command_buffer_info, &_frames[i].cmd));
+
+        ENQUEUE_DELETE(
+            vkDestroyCommandPool(_device, _frames[i].command_pool, nullptr));
+    }
 }
 
 void Engine::init_default_renderpass() {
@@ -428,16 +436,23 @@ void Engine::init_framebuffers() {
 
 void Engine::init_sync_structures() {
     auto fence_info = vkinit::fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
-    VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_render_fence));
-    ENQUEUE_DELETE(vkDestroyFence(_device, _render_fence, nullptr));
-
     auto sema_info = vkinit::semaphore_create_info();
-    VK_CHECK(
-        vkCreateSemaphore(_device, &sema_info, nullptr, &_present_semaphore));
-    VK_CHECK(
-        vkCreateSemaphore(_device, &sema_info, nullptr, &_render_semaphore));
-    ENQUEUE_DELETE(vkDestroySemaphore(_device, _present_semaphore, nullptr));
-    ENQUEUE_DELETE(vkDestroySemaphore(_device, _render_semaphore, nullptr));
+
+    for (int i = 0; i < FRAME_OVERLAP; ++i) {
+        VK_CHECK(vkCreateFence(
+            _device, &fence_info, nullptr, &_frames[i].render_fence));
+        ENQUEUE_DELETE(
+            vkDestroyFence(_device, _frames[i].render_fence, nullptr));
+
+        VK_CHECK(vkCreateSemaphore(
+            _device, &sema_info, nullptr, &_frames[i].present_semaphore));
+        VK_CHECK(vkCreateSemaphore(
+            _device, &sema_info, nullptr, &_frames[i].render_semaphore));
+        ENQUEUE_DELETE(
+            vkDestroySemaphore(_device, _frames[i].present_semaphore, nullptr));
+        ENQUEUE_DELETE(
+            vkDestroySemaphore(_device, _frames[i].render_semaphore, nullptr));
+    }
 }
 
 bool Engine::try_load_shader_module(const char* file_path,
@@ -714,4 +729,8 @@ void Engine::init_scene() {
             _scene.push_back(tri);
         }
     }
+}
+
+FrameData& Engine::get_current_frame() {
+    return _frames[_frame_number % FRAME_OVERLAP];
 }

@@ -10,6 +10,8 @@
 #include "vk_mesh.h"
 #include "vk_types.h"
 
+#define FRAME_OVERLAP 2
+
 struct DeletionQueue {
     std::deque<std::function<void()>> deletors;
 
@@ -37,6 +39,15 @@ struct RenderObject {
 struct MeshPushConstants {
     glm::vec4 data;
     glm::mat4 render_matrix;
+};
+
+struct FrameData {
+    VkSemaphore present_semaphore;
+    VkSemaphore render_semaphore;
+    VkFence render_fence;
+
+    VkCommandPool command_pool;
+    VkCommandBuffer cmd;
 };
 
 class Engine {
@@ -74,17 +85,13 @@ class Engine {
     // Command setup
     VkQueue _gfx_queue;
     uint32_t _gfx_queue_family;
-    VkCommandPool _command_pool;
-    VkCommandBuffer _command_buf;
 
     // Renderpass
     VkRenderPass _render_pass;
     std::vector<VkFramebuffer> _framebuffers;
 
-    // Sync structures
-    VkSemaphore _present_semaphore;
-    VkSemaphore _render_semaphore;
-    VkFence _render_fence;
+    // Sync
+    FrameData _frames[FRAME_OVERLAP];
 
     // Shader modules
     VkShaderModule _tri_frag;
@@ -133,6 +140,8 @@ class Engine {
     Mesh* get_mesh(std::string const& name);
     void draw_objects(VkCommandBuffer cmd,
                       std::vector<RenderObject> const& scene);
+
+    FrameData& get_current_frame();
 };
 
 #endif  // ENGINE_H
