@@ -14,6 +14,7 @@
 #define APP_NAME "Vulkan Engine"
 #define TIMEOUT_SECOND 1000000000  // ns
 #define SHADER_DIRECTORY "../shaders/"
+#define PRINT_DRAW_TIME FALSE
 
 #define VK_CHECK(x)                                       \
     do {                                                  \
@@ -188,12 +189,16 @@ void Engine::run() {
                 }
             }
         }
+#if PRINT_DRAW_TIME
         auto start = std::chrono::high_resolution_clock::now();
+#endif
         draw();
+#if PRINT_DRAW_TIME
         auto end = std::chrono::high_resolution_clock::now();
         auto ms =
             std::chrono::duration_cast<std::chrono::microseconds>(end - start);
         std::cout << ms.count() / 1000.f << " ms\n";
+#endif
     }
 }
 
