@@ -10,7 +10,6 @@ add_subdirectory(${EXTERNAL_DIR})
 
 # GLM
 include_directories(${EXTERNAL_DIR}/glm)
-set(LIBRARIES ${LIBRARIES} imgui)
 
 # SDL2
 find_package(SDL2 REQUIRED)
@@ -19,6 +18,7 @@ set(LIBRARIES ${LIBRARIES} ${SDL2_LIBRARIES})
 
 # ImGui
 include_directories(${EXTERNAL_DIR}/imgui)
+set(LIBRARIES ${LIBRARIES} imgui)
 
 # STB
 include_directories(${EXTERNAL_DIR}/stb)
