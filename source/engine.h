@@ -23,6 +23,17 @@ struct DeletionQueue {
     }
 };
 
+struct Material {
+    VkPipeline pipeline;
+    VkPipelineLayout pipeline_layout;
+};
+
+struct RenderObject {
+    Mesh* mesh;
+    Material* mat;
+    glm::mat4 transform;
+};
+
 struct MeshPushConstants {
     glm::vec4 data;
     glm::mat4 render_matrix;
@@ -89,8 +100,9 @@ class Engine {
     VkPipeline _tri_rgb_pipeline;
     VkPipeline _mesh_pipeline;
 
-    Mesh _tri_mesh;
-    Mesh _monkey_mesh;
+    std::vector<RenderObject> _scene;
+    std::unordered_map<std::string, Material> _materials;
+    std::unordered_map<std::string, Mesh> _meshes;
 
     // Methods
     void init();
@@ -107,11 +119,20 @@ class Engine {
     void init_framebuffers();
     void init_sync_structures();
     void init_pipelines();
+    void init_scene();
 
     bool try_load_shader_module(const char* file_path, VkShaderModule* out);
 
     void load_meshes();
     void upload_mesh(Mesh& mesh);
+
+    Material* create_mat(VkPipeline pipeline,
+                         VkPipelineLayout layout,
+                         std::string const& name);
+    Material* get_mat(std::string const& name);
+    Mesh* get_mesh(std::string const& name);
+    void draw_objects(VkCommandBuffer cmd,
+                      std::vector<RenderObject> const& scene);
 };
 
 #endif  // ENGINE_H
