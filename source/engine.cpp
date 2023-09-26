@@ -102,9 +102,8 @@ void Engine::draw() {
     // start recording
     VK_CHECK(vkBeginCommandBuffer(_command_buf, &begin_info));
 
-    float flash = abs(sin(_frame_number / 120.f));
     VkClearValue clear = {
-        .color = {1.f - flash, 0.f, flash, 1.f},
+        .color = {0.f, 0.f, 0.f},
     };
 
     VkClearValue depth_clear;
@@ -127,7 +126,7 @@ void Engine::draw() {
     glm::mat4 spin = glm::rotate(
         glm::mat4{1.f}, glm::radians(_frame_number * 0.8f), glm::vec3(0, 1, 0));
     _scene[0].transform = glm::scale(
-        glm::translate(spin, glm::vec3{0.f, 5.f, 0.f}), glm::vec3(5.f));
+        glm::translate(spin, glm::vec3{0.f, 0.f, 0.f}), glm::vec3(5.f));
 
     vkCmdBeginRenderPass(_command_buf, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
     draw_objects(_command_buf, _scene);
@@ -171,11 +170,14 @@ void Engine::draw() {
 void Engine::run() {
     SDL_Event ev;
     bool run = true;
+    float ms;
 
     while (run) {
         while (SDL_PollEvent(&ev) != 0) {
             if (ev.type == SDL_QUIT) {
                 run = false;
+                std::cout << "Rendered " << _frame_number << " frames\n";
+                std::cout << "Last frame took " << ms << " ms\n";
             } else if (ev.type == SDL_KEYDOWN) {
                 switch (ev.key.keysym.sym) {
                     case (SDLK_SPACE):
@@ -187,9 +189,9 @@ void Engine::run() {
         auto start = std::chrono::high_resolution_clock::now();
         draw();
         auto end = std::chrono::high_resolution_clock::now();
-        auto ms =
-            std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        std::cout << ms.count() / 1000.f << " ms\n";
+        ms = std::chrono::duration_cast<std::chrono::microseconds>(end - start)
+                 .count() /
+             1000.f;
     }
 }
 
@@ -522,7 +524,7 @@ void Engine::init_pipelines() {
     builder._vert_input_info =
         vkinit::vertex_input_state_create_info();  // soon...
     builder._input_assembly = vkinit::vertex_input_assembly_create_info(
-        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+        VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
 
     builder._viewport.x = 0.f;
     builder._viewport.y = 0.f;
@@ -590,9 +592,14 @@ void Engine::load_meshes() {
     auto tri_mesh = Mesh::make_simple_triangle();
     upload_mesh(tri_mesh);
     _meshes["tri"] = tri_mesh;
+
     auto monkey_mesh = Mesh::load_from_obj(ASSETS_DIRECTORY "monkey.obj");
     upload_mesh(monkey_mesh);
     _meshes["monkey"] = monkey_mesh;
+
+    auto points = Mesh::load_from_obj(ASSETS_DIRECTORY "pointcloud.obj");
+    upload_mesh(points);
+    _meshes["pointcloud"] = points;
 }
 
 void Engine::upload_mesh(Mesh& mesh) {
@@ -649,9 +656,8 @@ Mesh* Engine::get_mesh(std::string const& name) {
 void Engine::draw_objects(VkCommandBuffer cmd,
                           std::vector<RenderObject> const& scene) {
     // camera
-    glm::vec3 cam_pos = {
-        0.f, 6.f * (0.95f + cos(_frame_number / 200.0f)), -10.f};
-    auto view = glm::lookAt(cam_pos, glm::vec3{0, 4.f, 0}, glm::vec3{0, 1, 0});
+    glm::vec3 cam_pos = {0.f, 4.f * (1.f + cos(_frame_number / 200.0f)), -3.f};
+    auto view = glm::lookAt(cam_pos, glm::vec3{0, 0.f, 0}, glm::vec3{0, 1, 0});
     float aspect = (float)_window_extent.width / (float)_window_extent.height;
     glm::mat4 proj = glm::perspective(glm::radians(70.f), aspect, 0.1f, 200.f);
     proj[1][1] *= -1;
@@ -670,7 +676,7 @@ void Engine::draw_objects(VkCommandBuffer cmd,
         };
 
         vkCmdPushConstants(cmd,
-                           _mesh_pipeline_layout,
+                           obj.mat->pipeline_layout,
                            VK_SHADER_STAGE_VERTEX_BIT,
                            0,
                            sizeof(MeshPushConstants),
@@ -691,12 +697,14 @@ void Engine::draw_objects(VkCommandBuffer cmd,
 }
 
 void Engine::init_scene() {
-    RenderObject monkey = {
-        .mesh = get_mesh("monkey"),
+    RenderObject pointcloud = {
+        .mesh = get_mesh("pointcloud"),
         .mat = get_mat("mesh"),
         .transform = glm::mat4{1.0f},
     };
-    _scene.push_back(monkey);
+    _scene.push_back(pointcloud);
+
+    return;
 
     for (int x = -40; x <= 40; ++x) {
         for (int y = -40; y <= 40; ++y) {

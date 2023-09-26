@@ -46,7 +46,7 @@ class Engine {
 
     int _selected_shader{0};
 
-    VkExtent2D _window_extent{1280, 720};
+    VkExtent2D _window_extent{1920, 1080};
     struct SDL_Window* _window{nullptr};
 
     VmaAllocator _allocator;
