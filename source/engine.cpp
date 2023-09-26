@@ -713,8 +713,12 @@ void Engine::init_scene() {
     };
     _scene.push_back(monkey);
 
-    for (int x = -40; x <= 40; ++x) {
-        for (int y = -40; y <= 40; ++y) {
+    int radius = 40;
+    for (int x = -radius; x <= radius; ++x) {
+        for (int y = -radius; y <= radius; ++y) {
+            if (sqrt(x * x + y * y) > radius) {
+                continue;
+            }
             glm::vec3 pos = {x, 0, y};
             auto translate = glm::translate(glm::mat4{1.0f}, pos);
             auto scale =
