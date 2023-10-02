@@ -7,6 +7,7 @@
 #include <deque>
 #include <functional>
 #include <glm/glm.hpp>
+#include <iostream>
 #include "vk_mesh.h"
 #include "vk_types.h"
 
@@ -18,6 +19,7 @@ struct DeletionQueue {
     void push(std::function<void()>&& f) { deletors.push_back(f); }
 
     void flush() {
+        std::cout << "Deleting " << deletors.size() << " things...\n";
         while (!deletors.empty()) {
             (*deletors.rbegin())();
             deletors.pop_back();
@@ -41,6 +43,12 @@ struct MeshPushConstants {
     glm::mat4 render_matrix;
 };
 
+struct GPUCameraData {
+    glm::mat4 view;
+    glm::mat4 proj;
+    glm::mat4 viewproj;
+};
+
 struct FrameData {
     VkSemaphore present_semaphore;
     VkSemaphore render_semaphore;
@@ -48,6 +56,9 @@ struct FrameData {
 
     VkCommandPool command_pool;
     VkCommandBuffer cmd;
+
+    AllocatedBuffer cam_buf;
+    VkDescriptorSet global_descriptor;
 };
 
 class Engine {
@@ -125,6 +136,7 @@ class Engine {
     void init_default_renderpass();
     void init_framebuffers();
     void init_sync_structures();
+    void init_descriptors();
     void init_pipelines();
     void init_scene();
 
@@ -142,6 +154,9 @@ class Engine {
                       std::vector<RenderObject> const& scene);
 
     FrameData& get_current_frame();
+    AllocatedBuffer create_buffer(size_t size,
+                                  VkBufferUsageFlags usage,
+                                  VmaMemoryUsage memory_usage);
 };
 
 #endif  // ENGINE_H

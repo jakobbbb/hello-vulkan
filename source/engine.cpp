@@ -48,6 +48,9 @@ void Engine::init() {
     std::cout << "Initializing Sync Structures...\n";
     init_sync_structures();
 
+    std::cout << "Initializing Descriptors...\n";
+    init_descriptors();
+
     std::cout << "Initializing Pipelines...\n";
     init_pipelines();
 
@@ -494,6 +497,16 @@ bool Engine::try_load_shader_module(const char* file_path,
     return true;
 }
 
+void Engine::init_descriptors() {
+    for (int i = 0; i < FRAME_OVERLAP; ++i) {
+        _frames[i].cam_buf = create_buffer(sizeof(GPUCameraData),
+                                           VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                           VMA_MEMORY_USAGE_CPU_TO_GPU);
+        ENQUEUE_DELETE(vmaDestroyBuffer(
+            _allocator, _frames[i].cam_buf.buf, _frames[i].cam_buf.alloc));
+    }
+}
+
 void Engine::init_pipelines() {
     // shaders
     try_load_shader_module(SHADER_DIRECTORY "triangle.frag.spv", &_tri_frag);
@@ -742,4 +755,25 @@ void Engine::init_scene() {
 
 FrameData& Engine::get_current_frame() {
     return _frames[_frame_number % FRAME_OVERLAP];
+}
+
+AllocatedBuffer Engine::create_buffer(size_t size,
+                                      VkBufferUsageFlags usage,
+                                      VmaMemoryUsage memory_usage) {
+    VkBufferCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .pNext = nullptr,
+        .size = size,
+        .usage = usage,
+    };
+
+    VmaAllocationCreateInfo alloc_info = {
+        .usage = memory_usage,
+    };
+
+    AllocatedBuffer buf;
+
+    VK_CHECK(vmaCreateBuffer(
+        _allocator, &info, &alloc_info, &buf.buf, &buf.alloc, nullptr));
+    return buf;
 }
