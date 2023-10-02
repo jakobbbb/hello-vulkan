@@ -14,7 +14,7 @@
 #define APP_NAME "Vulkan Engine"
 #define TIMEOUT_SECOND 1000000000  // ns
 #define SHADER_DIRECTORY "../shaders/"
-#define PRINT_DRAW_TIME FALSE
+// #define PRINT_DRAW_TIME
 
 #define VK_CHECK(x)                                       \
     do {                                                  \
@@ -192,11 +192,11 @@ void Engine::run() {
                 }
             }
         }
-#if PRINT_DRAW_TIME
+#ifdef PRINT_DRAW_TIME
         auto start = std::chrono::high_resolution_clock::now();
 #endif
         draw();
-#if PRINT_DRAW_TIME
+#ifdef PRINT_DRAW_TIME
         auto end = std::chrono::high_resolution_clock::now();
         auto ms =
             std::chrono::duration_cast<std::chrono::microseconds>(end - start);
@@ -498,12 +498,80 @@ bool Engine::try_load_shader_module(const char* file_path,
 }
 
 void Engine::init_descriptors() {
+    // Layout
+    VkDescriptorSetLayoutBinding cam_buf_binding = {
+        .binding = 0,
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+    };
+    VkDescriptorSetLayoutCreateInfo set_info = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .bindingCount = 1,
+        .pBindings = &cam_buf_binding,
+    };
+    VK_CHECK(vkCreateDescriptorSetLayout(
+        _device, &set_info, nullptr, &_global_set_layout));
+    ENQUEUE_DELETE(
+        vkDestroyDescriptorSetLayout(_device, _global_set_layout, nullptr));
+
+    // Pool holds 10 uniform buffers
+    std::vector<VkDescriptorPoolSize> sizes = {
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10},
+    };
+    VkDescriptorPoolCreateInfo pool_info = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .maxSets = 10,
+        .poolSizeCount = (uint32_t)sizes.size(),
+        .pPoolSizes = sizes.data(),
+    };
+    VK_CHECK(vkCreateDescriptorPool(
+        _device, &pool_info, nullptr, &_descriptor_pool));
+    ENQUEUE_DELETE(vkDestroyDescriptorPool(_device, _descriptor_pool, nullptr));
+
     for (int i = 0; i < FRAME_OVERLAP; ++i) {
+        // Buffers
         _frames[i].cam_buf = create_buffer(sizeof(GPUCameraData),
                                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                            VMA_MEMORY_USAGE_CPU_TO_GPU);
         ENQUEUE_DELETE(vmaDestroyBuffer(
             _allocator, _frames[i].cam_buf.buf, _frames[i].cam_buf.alloc));
+
+        // Allocate Descriptor sets
+        VkDescriptorSetAllocateInfo alloc_info = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .pNext = nullptr,
+            .descriptorPool = _descriptor_pool,
+            .descriptorSetCount = 1,
+            .pSetLayouts = &_global_set_layout,
+        };
+        VK_CHECK(vkAllocateDescriptorSets(
+            _device, &alloc_info, &_frames[i].global_descriptor));
+
+        // point descriptor set 0 to camera data buffer
+        VkDescriptorBufferInfo buf_info = {
+            .buffer = _frames[i].cam_buf.buf,
+            .offset = 0,
+            .range = sizeof(GPUCameraData),
+        };
+        VkWriteDescriptorSet set_write = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .pNext = nullptr,
+            .dstSet = _frames[i].global_descriptor,
+            .dstBinding = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .pBufferInfo = &buf_info,
+        };
+        vkUpdateDescriptorSets(_device,
+                               1,  // descriptor write count
+                               &set_write,
+                               0,  // descriptor copy count
+                               nullptr);
     }
 }
 
@@ -543,6 +611,8 @@ void Engine::init_pipelines() {
     };
     layout_info_mesh.pPushConstantRanges = &push_constant;
     layout_info_mesh.pushConstantRangeCount = 1;
+    layout_info_mesh.setLayoutCount = 1;
+    layout_info_mesh.pSetLayouts = &_global_set_layout;
     VK_CHECK(vkCreatePipelineLayout(
         _device, &layout_info_mesh, nullptr, &_mesh_pipeline_layout));
 
@@ -688,6 +758,16 @@ void Engine::draw_objects(VkCommandBuffer cmd,
     float aspect = (float)_window_extent.width / (float)_window_extent.height;
     glm::mat4 proj = glm::perspective(glm::radians(70.f), aspect, 0.1f, 200.f);
     proj[1][1] *= -1;
+    GPUCameraData cam_data = {
+        .view = view,
+        .proj = proj,
+        .viewproj = proj * view,
+    };
+    // copy to buffer
+    void* p_cam_data;
+    vmaMapMemory(_allocator, get_current_frame().cam_buf.alloc, &p_cam_data);
+    memcpy(p_cam_data, &cam_data, sizeof(GPUCameraData));
+    vmaUnmapMemory(_allocator, get_current_frame().cam_buf.alloc);
 
     Mesh* last_mesh = nullptr;
     Material* last_mat = nullptr;
@@ -696,10 +776,18 @@ void Engine::draw_objects(VkCommandBuffer cmd,
             last_mat = obj.mat;
             vkCmdBindPipeline(
                 cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, obj.mat->pipeline);
+            vkCmdBindDescriptorSets(cmd,
+                                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    obj.mat->pipeline_layout,
+                                    0,  // first set
+                                    1,  // descriptor set count
+                                    &get_current_frame().global_descriptor,
+                                    0,  // no dynamic offsets
+                                    nullptr);
         }
 
         MeshPushConstants push_constants = {
-            .render_matrix = proj * view * obj.transform,
+            .render_matrix = obj.transform,
         };
 
         vkCmdPushConstants(cmd,

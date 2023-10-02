@@ -1,10 +1,18 @@
 #version 450
 
-layout (location = 0) in vec3 inPos;
-layout (location = 1) in vec3 inNormal;
-layout (location = 2) in vec3 inColor;
+layout (location = 0) in vec3 vPos;
+layout (location = 1) in vec3 vNormal;
+layout (location = 2) in vec3 vColor;
 
 layout (location = 0) out vec3 outColor;
+
+// Decriptor set at slot 0
+// Binding 0 within that set
+layout (set = 0, binding = 0) uniform CameraBuffer {
+    mat4 view;
+    mat4 proj;
+    mat4 viewproj;
+} CameraData;
 
 layout (push_constant) uniform constants {
     vec4 data;
@@ -12,6 +20,7 @@ layout (push_constant) uniform constants {
 } PushConstants;
 
 void main() {
-    gl_Position = PushConstants.render_matrix * vec4(inPos, 1.0f);
-    outColor = inColor;
+    mat4 transform = CameraData.viewproj * PushConstants.render_matrix;
+    gl_Position = transform * vec4(vPos, 1.0f);
+    outColor = vColor;
 }

@@ -122,6 +122,10 @@ class Engine {
     std::unordered_map<std::string, Material> _materials;
     std::unordered_map<std::string, Mesh> _meshes;
 
+    // Descriptor stuff
+    VkDescriptorSetLayout _global_set_layout;
+    VkDescriptorPool _descriptor_pool;
+
     // Methods
     void init();
     void cleanup();
