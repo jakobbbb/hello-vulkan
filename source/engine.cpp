@@ -800,6 +800,16 @@ void Engine::draw_objects(VkCommandBuffer cmd,
     memcpy(p_cam_data, &cam_data, sizeof(GPUCameraData));
     vmaUnmapMemory(_allocator, get_current_frame().cam_buf.alloc);
 
+    // scene metadata
+    _scene_data.ambient_color = {1, 0.3, 0.3, 1};
+    // copy scene metadata
+    char* p_scene_data;
+    vmaMapMemory(_allocator, _scene_data_buf.alloc, (void**)&p_scene_data);
+    p_scene_data += pad_uniform_buf_size(sizeof(GPUSceneData)) *
+                    (_frame_number % FRAME_OVERLAP);
+    memcpy(p_scene_data, &_scene_data, sizeof(GPUSceneData));
+    vmaUnmapMemory(_allocator, _scene_data_buf.alloc);
+
     Mesh* last_mesh = nullptr;
     Material* last_mat = nullptr;
     for (auto obj : _scene) {
