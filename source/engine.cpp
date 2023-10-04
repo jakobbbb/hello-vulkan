@@ -605,7 +605,7 @@ void Engine::init_pipelines() {
     // shaders
     try_load_shader_module(SHADER_DIRECTORY "triangle.frag.spv", &_tri_frag);
     try_load_shader_module(SHADER_DIRECTORY "triangle.vert.spv", &_tri_vert);
-    try_load_shader_module(SHADER_DIRECTORY "tri_rgb.frag.spv", &_tri_rgb_frag);
+    try_load_shader_module(SHADER_DIRECTORY "default_lit.frag.spv", &_tri_rgb_frag);
     try_load_shader_module(SHADER_DIRECTORY "tri_rgb.vert.spv", &_tri_rgb_vert);
     try_load_shader_module(SHADER_DIRECTORY "tri_mesh.vert.spv",
                            &_tri_mesh_vert);
