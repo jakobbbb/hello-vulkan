@@ -241,7 +241,13 @@ void Engine::init_vulkan() {
                                        .value();
 
     vkb::DeviceBuilder dev_builder{phys_dev};
-    vkb::Device dev = dev_builder.build().value();
+    VkPhysicalDeviceShaderDrawParametersFeatures features = {
+        .sType =
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES,
+        .pNext = nullptr,
+        .shaderDrawParameters = VK_TRUE,
+    };
+    vkb::Device dev = dev_builder.add_pNext(&features).build().value();
 
     _device = dev.device;
     _phys_device = dev.physical_device;
@@ -673,13 +679,17 @@ void Engine::init_pipelines() {
     auto vert_mesh = vkinit::pipeline_shader_stage_create_info(
         VK_SHADER_STAGE_VERTEX_BIT, _tri_mesh_vert);
 
+    VkDescriptorSetLayout descriptor_set_layouts[] = {
+        _global_set_layout,
+        _obj_set_layout,
+    };
     // Layout (Tri)
     VkPipelineLayoutCreateInfo layout_info =
         vkinit::pipeline_layout_create_info();
-    layout_info.setLayoutCount = 1;  // default_lit.frag uses sceneData,
+    layout_info.setLayoutCount = 2;  // default_lit.frag uses sceneData,
                                      // so we need to add the set layout for
                                      // this pipeline too
-    layout_info.pSetLayouts = &_global_set_layout;
+    layout_info.pSetLayouts = descriptor_set_layouts;
     VK_CHECK(vkCreatePipelineLayout(
         _device, &layout_info, nullptr, &_tri_pipeline_layout));
 
@@ -693,8 +703,8 @@ void Engine::init_pipelines() {
     };
     layout_info_mesh.pPushConstantRanges = &push_constant;
     layout_info_mesh.pushConstantRangeCount = 1;
-    layout_info_mesh.setLayoutCount = 1;
-    layout_info_mesh.pSetLayouts = &_global_set_layout;
+    layout_info_mesh.setLayoutCount = 2;
+    layout_info_mesh.pSetLayouts = descriptor_set_layouts;
     VK_CHECK(vkCreatePipelineLayout(
         _device, &layout_info_mesh, nullptr, &_mesh_pipeline_layout));
 
@@ -861,8 +871,19 @@ void Engine::draw_objects(VkCommandBuffer cmd,
     memcpy(p_scene_data, &_scene_data, sizeof(GPUSceneData));
     vmaUnmapMemory(_allocator, _scene_data_buf.alloc);
 
+    // object data
+    void* p_obj_data;
+    vmaMapMemory(_allocator, get_current_frame().obj_buf.alloc, &p_obj_data);
+    GPUObjectData* objectSSBO = (GPUObjectData*)p_obj_data;
+    for (int i = 0; i < scene.size(); ++i) {
+        auto obj = scene[i];
+        objectSSBO[i].model_mat = obj.transform;
+    }
+    vmaUnmapMemory(_allocator, get_current_frame().obj_buf.alloc);
+
     Mesh* last_mesh = nullptr;
     Material* last_mat = nullptr;
+    int i = 0;
     for (auto obj : _scene) {
         if (obj.mat != last_mat) {
             last_mat = obj.mat;
@@ -880,6 +901,14 @@ void Engine::draw_objects(VkCommandBuffer cmd,
                                     &get_current_frame().global_descriptor,
                                     1,  // dynamic offsets
                                     &scene_buf_offset);
+            vkCmdBindDescriptorSets(cmd,
+                                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    obj.mat->pipeline_layout,
+                                    1,  // second set
+                                    1,  // descriptor set count
+                                    &get_current_frame().obj_descriptor,
+                                    0,  // dynamic offsets
+                                    nullptr);
         }
 
         MeshPushConstants push_constants = {
@@ -903,7 +932,7 @@ void Engine::draw_objects(VkCommandBuffer cmd,
                                    &offset);
         }
 
-        vkCmdDraw(cmd, obj.mesh->verts.size(), 1, 0, 0);
+        vkCmdDraw(cmd, obj.mesh->verts.size(), 1, 0, i++);
     }
 }
 
