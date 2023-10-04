@@ -554,7 +554,7 @@ void Engine::init_descriptors() {
     ENQUEUE_DELETE(vmaDestroyBuffer(
         _allocator, _scene_data_buf.buf, _scene_data_buf.alloc));
 
-    // Pool holds 10 uniform buffers
+    // Pool holds 10 uniform buffers, 10 dynamic buffers, 10 storage buffers
     std::vector<VkDescriptorPoolSize> sizes = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10},
