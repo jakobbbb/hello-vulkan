@@ -201,3 +201,33 @@ vkinit::depth_stencil_create_info(bool test, bool write, VkCompareOp compare) {
     };
     return info;
 }
+
+VkDescriptorSetLayoutBinding vkinit::descriptorset_layout_binding(
+    VkDescriptorType type,
+    VkShaderStageFlags stage_flags,
+    uint32_t binding) {
+    VkDescriptorSetLayoutBinding b = {
+        .binding = binding,
+        .descriptorType = type,
+        .descriptorCount = 1,
+        .stageFlags = stage_flags,
+    };
+    return b;
+}
+
+VkWriteDescriptorSet vkinit::write_descriptor_buffer(
+    VkDescriptorType type,
+    VkDescriptorSet dst_set,
+    VkDescriptorBufferInfo* buf_info,
+    uint32_t binding) {
+    VkWriteDescriptorSet set_write = {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .pNext = nullptr,
+        .dstSet = dst_set,
+        .dstBinding = binding,
+        .descriptorCount = 1,
+        .descriptorType = type,
+        .pBufferInfo = buf_info,
+    };
+    return set_write;
+}

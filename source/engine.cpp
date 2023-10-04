@@ -501,23 +501,36 @@ bool Engine::try_load_shader_module(const char* file_path,
 
 void Engine::init_descriptors() {
     // Layout
-    VkDescriptorSetLayoutBinding cam_buf_binding = {
-        .binding = 0,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-    };
+    auto cam_buf_binding = vkinit::descriptorset_layout_binding(
+        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0);
+    auto scene_buf_binding = vkinit::descriptorset_layout_binding(
+        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        1);
+    VkDescriptorSetLayoutBinding bindings[] = {cam_buf_binding,
+                                               scene_buf_binding};
+
     VkDescriptorSetLayoutCreateInfo set_info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
-        .bindingCount = 1,
-        .pBindings = &cam_buf_binding,
+        .bindingCount = 2,
+        .pBindings = bindings,
     };
     VK_CHECK(vkCreateDescriptorSetLayout(
         _device, &set_info, nullptr, &_global_set_layout));
     ENQUEUE_DELETE(
         vkDestroyDescriptorSetLayout(_device, _global_set_layout, nullptr));
+
+    // Uniform buffer for scene data
+    // need one for each overlapping frame
+    const size_t scene_data_buf_size =
+        FRAME_OVERLAP * pad_uniform_buf_size(sizeof(GPUSceneData));
+    _scene_data_buf = create_buffer(scene_data_buf_size,
+                                    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                    VMA_MEMORY_USAGE_CPU_TO_GPU);
+    ENQUEUE_DELETE(vmaDestroyBuffer(
+        _allocator, _scene_data_buf.buf, _scene_data_buf.alloc));
 
     // Pool holds 10 uniform buffers
     std::vector<VkDescriptorPoolSize> sizes = {
@@ -555,23 +568,34 @@ void Engine::init_descriptors() {
             _device, &alloc_info, &_frames[i].global_descriptor));
 
         // point descriptor set 0 to camera data buffer
-        VkDescriptorBufferInfo buf_info = {
+        VkDescriptorBufferInfo cam_buf_info = {
             .buffer = _frames[i].cam_buf.buf,
             .offset = 0,
             .range = sizeof(GPUCameraData),
         };
-        VkWriteDescriptorSet set_write = {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .pNext = nullptr,
-            .dstSet = _frames[i].global_descriptor,
-            .dstBinding = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .pBufferInfo = &buf_info,
+        auto cam_set_write =
+            vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                                            _frames[i].global_descriptor,
+                                            &cam_buf_info,
+                                            0);
+        // descriptor set 1 is scene data buffer
+        VkDescriptorBufferInfo scene_buf_info = {
+            .buffer = _scene_data_buf.buf,
+            .offset = pad_uniform_buf_size(sizeof(GPUSceneData)) * i,
+            .range = sizeof(GPUSceneData),
+        };
+        auto scene_set_write =
+            vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                                            _frames[i].global_descriptor,
+                                            &scene_buf_info,
+                                            1);
+        VkWriteDescriptorSet write_descriptors[] = {
+            cam_set_write,
+            scene_set_write,
         };
         vkUpdateDescriptorSets(_device,
-                               1,  // descriptor write count
-                               &set_write,
+                               2,  // descriptor write count
+                               write_descriptors,
                                0,  // descriptor copy count
                                nullptr);
     }
@@ -866,4 +890,15 @@ AllocatedBuffer Engine::create_buffer(size_t size,
     VK_CHECK(vmaCreateBuffer(
         _allocator, &info, &alloc_info, &buf.buf, &buf.alloc, nullptr));
     return buf;
+}
+
+size_t Engine::pad_uniform_buf_size(size_t original_size) const {
+    size_t min_alignment =
+        _gpu_properties.limits.minUniformBufferOffsetAlignment;
+    size_t aligned_size = original_size;
+    if (min_alignment > 0) {
+        aligned_size =
+            (aligned_size + min_alignment - 1) & ~(min_alignment - 1);
+    }
+    return aligned_size;
 }

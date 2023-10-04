@@ -49,6 +49,16 @@ VkImageViewCreateInfo imageview_create_info(VkFormat format,
 VkPipelineDepthStencilStateCreateInfo
 depth_stencil_create_info(bool test, bool write, VkCompareOp compare);
 
+VkDescriptorSetLayoutBinding descriptorset_layout_binding(
+    VkDescriptorType type,
+    VkShaderStageFlags stage_flags,
+    uint32_t binding);
+
+VkWriteDescriptorSet write_descriptor_buffer(VkDescriptorType type,
+                                             VkDescriptorSet dst_set,
+                                             VkDescriptorBufferInfo* buf_info,
+                                             uint32_t binding);
+
 }  // namespace vkinit
 
 #endif  // VK_INIT_H

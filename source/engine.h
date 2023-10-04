@@ -61,6 +61,15 @@ struct FrameData {
     VkDescriptorSet global_descriptor;
 };
 
+// Rule of thumb:  Only vec4 and mat4
+struct GPUSceneData {
+    glm::vec4 fog_color;
+    glm::vec4 fog_distances;  // min, max, unused, unused
+    glm::vec4 ambient_color;
+    glm::vec4 sun_direction;  // x, y, z, power
+    glm::vec4 sun_color;
+};
+
 class Engine {
    public:
     VkPhysicalDeviceProperties _gpu_properties;
@@ -128,6 +137,10 @@ class Engine {
     VkDescriptorSetLayout _global_set_layout;
     VkDescriptorPool _descriptor_pool;
 
+    // Scene
+    GPUSceneData _scene_data;
+    AllocatedBuffer _scene_data_buf;
+
     // Methods
     void init();
     void cleanup();
@@ -163,6 +176,8 @@ class Engine {
     AllocatedBuffer create_buffer(size_t size,
                                   VkBufferUsageFlags usage,
                                   VmaMemoryUsage memory_usage);
+
+    size_t pad_uniform_buf_size(size_t original_size) const;
 };
 
 #endif  // ENGINE_H
