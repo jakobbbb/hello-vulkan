@@ -605,7 +605,8 @@ void Engine::init_pipelines() {
     // shaders
     try_load_shader_module(SHADER_DIRECTORY "triangle.frag.spv", &_tri_frag);
     try_load_shader_module(SHADER_DIRECTORY "triangle.vert.spv", &_tri_vert);
-    try_load_shader_module(SHADER_DIRECTORY "default_lit.frag.spv", &_tri_rgb_frag);
+    try_load_shader_module(SHADER_DIRECTORY "default_lit.frag.spv",
+                           &_tri_rgb_frag);
     try_load_shader_module(SHADER_DIRECTORY "tri_rgb.vert.spv", &_tri_rgb_vert);
     try_load_shader_module(SHADER_DIRECTORY "tri_mesh.vert.spv",
                            &_tri_mesh_vert);
@@ -624,6 +625,10 @@ void Engine::init_pipelines() {
     // Layout (Tri)
     VkPipelineLayoutCreateInfo layout_info =
         vkinit::pipeline_layout_create_info();
+    layout_info.setLayoutCount = 1;  // default_lit.frag uses sceneData,
+                                     // so we need to add the set layout for
+                                     // this pipeline too
+    layout_info.pSetLayouts = &_global_set_layout;
     VK_CHECK(vkCreatePipelineLayout(
         _device, &layout_info, nullptr, &_tri_pipeline_layout));
 
