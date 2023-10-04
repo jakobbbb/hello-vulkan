@@ -59,6 +59,9 @@ struct FrameData {
 
     AllocatedBuffer cam_buf;
     VkDescriptorSet global_descriptor;
+
+    AllocatedBuffer obj_buf;
+    VkDescriptorSet obj_descriptor;
 };
 
 // Rule of thumb:  Only vec4 and mat4
@@ -68,6 +71,10 @@ struct GPUSceneData {
     glm::vec4 ambient_color;
     glm::vec4 sun_direction;  // x, y, z, power
     glm::vec4 sun_color;
+};
+
+struct GPUObjectData {
+    glm::mat4 model_mat;
 };
 
 class Engine {
@@ -135,6 +142,7 @@ class Engine {
 
     // Descriptor stuff
     VkDescriptorSetLayout _global_set_layout;
+    VkDescriptorSetLayout _obj_set_layout;
     VkDescriptorPool _descriptor_pool;
 
     // Scene

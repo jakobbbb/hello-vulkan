@@ -510,6 +510,7 @@ void Engine::init_descriptors() {
     VkDescriptorSetLayoutBinding bindings[] = {cam_buf_binding,
                                                scene_buf_binding};
 
+    // descriptor set for global set
     VkDescriptorSetLayoutCreateInfo set_info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         .pNext = nullptr,
@@ -521,6 +522,21 @@ void Engine::init_descriptors() {
         _device, &set_info, nullptr, &_global_set_layout));
     ENQUEUE_DELETE(
         vkDestroyDescriptorSetLayout(_device, _global_set_layout, nullptr));
+
+    // descriptor set for object storage buffer
+    auto obj_buf_bind = vkinit::descriptorset_layout_binding(
+        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0);
+    VkDescriptorSetLayoutCreateInfo obj_set_info = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .bindingCount = 1,
+        .pBindings = &obj_buf_bind,
+    };
+    VK_CHECK(vkCreateDescriptorSetLayout(
+        _device, &obj_set_info, nullptr, &_obj_set_layout));
+    ENQUEUE_DELETE(
+        vkDestroyDescriptorSetLayout(_device, _obj_set_layout, nullptr));
 
     // Uniform buffer for scene data
     // need one for each overlapping frame
@@ -536,6 +552,7 @@ void Engine::init_descriptors() {
     std::vector<VkDescriptorPoolSize> sizes = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10},
     };
     VkDescriptorPoolCreateInfo pool_info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
@@ -549,6 +566,7 @@ void Engine::init_descriptors() {
         _device, &pool_info, nullptr, &_descriptor_pool));
     ENQUEUE_DELETE(vkDestroyDescriptorPool(_device, _descriptor_pool, nullptr));
 
+    // per-frame stuff
     for (int i = 0; i < FRAME_OVERLAP; ++i) {
         // Buffers
         _frames[i].cam_buf = create_buffer(sizeof(GPUCameraData),
@@ -556,6 +574,13 @@ void Engine::init_descriptors() {
                                            VMA_MEMORY_USAGE_CPU_TO_GPU);
         ENQUEUE_DELETE(vmaDestroyBuffer(
             _allocator, _frames[i].cam_buf.buf, _frames[i].cam_buf.alloc));
+
+        const int MAX_OBJECTS = 10000;
+        _frames[i].obj_buf = create_buffer(sizeof(GPUObjectData) * MAX_OBJECTS,
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                           VMA_MEMORY_USAGE_CPU_TO_GPU);
+        ENQUEUE_DELETE(vmaDestroyBuffer(
+            _allocator, _frames[i].obj_buf.buf, _frames[i].obj_buf.alloc));
 
         // Allocate Descriptor sets
         VkDescriptorSetAllocateInfo alloc_info = {
@@ -590,12 +615,37 @@ void Engine::init_descriptors() {
             _frames[i].global_descriptor,
             &scene_buf_info,
             1);
+
+        // object buffer
+        VkDescriptorSetAllocateInfo obj_set_alloc = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .pNext = nullptr,
+            .descriptorPool = _descriptor_pool,
+            .descriptorSetCount = 1,
+            .pSetLayouts = &_obj_set_layout,
+        };
+        VK_CHECK(vkAllocateDescriptorSets(
+            _device, &obj_set_alloc, &_frames[i].obj_descriptor));
+
+        VkDescriptorBufferInfo obj_buf_info = {
+            .buffer = _frames[i].obj_buf.buf,
+            .offset = 0,
+            .range = sizeof(GPUObjectData) * MAX_OBJECTS,
+        };
+        auto obj_set_write =
+            vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                                            _frames[i].obj_descriptor,
+                                            &obj_buf_info,
+                                            0);
+
+        // Finally, update descriptor sets
         VkWriteDescriptorSet write_descriptors[] = {
             cam_set_write,
             scene_set_write,
+            obj_set_write,
         };
         vkUpdateDescriptorSets(_device,
-                               2,  // descriptor write count
+                               3,  // descriptor write count
                                write_descriptors,
                                0,  // descriptor copy count
                                nullptr);
