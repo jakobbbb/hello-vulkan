@@ -504,7 +504,7 @@ void Engine::init_descriptors() {
     auto cam_buf_binding = vkinit::descriptorset_layout_binding(
         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0);
     auto scene_buf_binding = vkinit::descriptorset_layout_binding(
-        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         1);
     VkDescriptorSetLayoutBinding bindings[] = {cam_buf_binding,
@@ -535,6 +535,7 @@ void Engine::init_descriptors() {
     // Pool holds 10 uniform buffers
     std::vector<VkDescriptorPoolSize> sizes = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10},
     };
     VkDescriptorPoolCreateInfo pool_info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
@@ -581,14 +582,14 @@ void Engine::init_descriptors() {
         // descriptor set 1 is scene data buffer
         VkDescriptorBufferInfo scene_buf_info = {
             .buffer = _scene_data_buf.buf,
-            .offset = pad_uniform_buf_size(sizeof(GPUSceneData)) * i,
+            .offset = 0,
             .range = sizeof(GPUSceneData),
         };
-        auto scene_set_write =
-            vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                                            _frames[i].global_descriptor,
-                                            &scene_buf_info,
-                                            1);
+        auto scene_set_write = vkinit::write_descriptor_buffer(
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+            _frames[i].global_descriptor,
+            &scene_buf_info,
+            1);
         VkWriteDescriptorSet write_descriptors[] = {
             cam_set_write,
             scene_set_write,
@@ -815,6 +816,10 @@ void Engine::draw_objects(VkCommandBuffer cmd,
     for (auto obj : _scene) {
         if (obj.mat != last_mat) {
             last_mat = obj.mat;
+            uint32_t scene_buf_offset =
+                pad_uniform_buf_size(sizeof(GPUSceneData)) *
+                (_frame_number % FRAME_OVERLAP);
+
             vkCmdBindPipeline(
                 cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, obj.mat->pipeline);
             vkCmdBindDescriptorSets(cmd,
@@ -823,8 +828,8 @@ void Engine::draw_objects(VkCommandBuffer cmd,
                                     0,  // first set
                                     1,  // descriptor set count
                                     &get_current_frame().global_descriptor,
-                                    0,  // no dynamic offsets
-                                    nullptr);
+                                    1,  // dynamic offsets
+                                    &scene_buf_offset);
         }
 
         MeshPushConstants push_constants = {
