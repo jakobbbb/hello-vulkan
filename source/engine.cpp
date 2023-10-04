@@ -258,6 +258,8 @@ void Engine::init_vulkan() {
     };
     vmaCreateAllocator(&allocator_info, &_allocator);
     ENQUEUE_DELETE(vmaDestroyAllocator(_allocator));
+
+    _gpu_properties = dev.physical_device.properties;
 }
 
 void Engine::init_swapchain() {

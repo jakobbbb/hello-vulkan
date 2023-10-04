@@ -63,6 +63,8 @@ struct FrameData {
 
 class Engine {
    public:
+    VkPhysicalDeviceProperties _gpu_properties;
+
     bool _is_initialized{false};
     int _frame_number{0};
 
