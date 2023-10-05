@@ -94,7 +94,11 @@ void Engine::draw() {
     uint32_t swapchain_im_idx;
     VK_CHECK(vkAcquireNextImageKHR(_device,
                                    _swapchain,
-                                   1 * TIMEOUT_SECOND,
+                                   UINT64_MAX,  // anytime there are less than
+                                                // ~5k objects in the scene,
+                                                // any timeout other than this
+                                                // (indefinite) causes a timeout
+                                                // and subsequent crash
                                    f.present_semaphore,
                                    nullptr,
                                    &swapchain_im_idx));
