@@ -7,6 +7,7 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <iostream>
+#include <numeric>
 #include "pipeline_builder.h"
 #include "vk_init.h"
 #include "vk_types.h"
@@ -14,7 +15,7 @@
 #define APP_NAME "Vulkan Engine"
 static constexpr uint64_t TIMEOUT_SECOND = 1000000000;  // ns
 #define SHADER_DIRECTORY "../shaders/"
-// #define PRINT_DRAW_TIME
+#define PRINT_DRAW_TIME
 
 #define VK_CHECK(x)                                       \
     do {                                                  \
@@ -60,6 +61,10 @@ void Engine::init() {
     std::cout << "Initializing Scene...\n";
     init_scene();
 
+#ifdef PRINT_DRAW_TIME
+    _draw_times.resize(100);
+#endif  // PRINT_DRAW_TIME
+
     _is_initialized = true;  // happy day
 }
 
@@ -82,6 +87,14 @@ void Engine::cleanup() {
 
     // window
     SDL_DestroyWindow(_window);
+
+#ifdef PRINT_DRAW_TIME
+    std::cout << "Drew " << _frame_number << " frames.\n";
+    auto total = std::reduce(_draw_times.cbegin(), _draw_times.cend());
+    std::cout << "Average draw time over the last " << _draw_times.size()
+              << " frames: " << total / _draw_times.size() << " ms ("
+              << _draw_times.size() / (total / 1000.f) << " fps).\n";
+#endif  // PRINT_DRAW_TIME
 }
 
 void Engine::draw() {
@@ -202,9 +215,10 @@ void Engine::run() {
         draw();
 #ifdef PRINT_DRAW_TIME
         auto end = std::chrono::high_resolution_clock::now();
-        auto ms =
+        auto us =
             std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        std::cout << ms.count() / 1000.f << " ms\n";
+        auto ms = us.count() / 1000.f;
+        _draw_times[_frame_number % _draw_times.size()] = ms;
 #endif
     }
 }

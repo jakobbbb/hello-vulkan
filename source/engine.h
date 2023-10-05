@@ -89,6 +89,7 @@ class Engine {
 
     bool _is_initialized{false};
     int _frame_number{0};
+    std::vector<float> _draw_times;
 
     int _selected_shader{0};
 
