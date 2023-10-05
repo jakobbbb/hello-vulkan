@@ -27,6 +27,18 @@ static constexpr uint64_t TIMEOUT_SECOND = 1000000000;  // ns
     } while (0)
 #define ENQUEUE_DELETE(x) _del_queue.push([=]() { x; })
 
+#define PRINT_RUN_TIME(msg, x)                                                 \
+    {                                                                          \
+        auto start = std::chrono::high_resolution_clock::now();                \
+        x;                                                                     \
+        auto end = std::chrono::high_resolution_clock::now();                  \
+        auto ms =                                                              \
+            std::chrono::duration_cast<std::chrono::microseconds>(end - start) \
+                .count() /                                                     \
+            1000.0f;                                                           \
+        std::cout << msg << " took " << ms << " ms.\n";                        \
+    }
+
 void Engine::init() {
     std::cout << "Initializing SDL...\n";
     init_sdl();
@@ -129,7 +141,7 @@ void Engine::draw() {
 
     float flash = abs(sin(_frame_number / 120.f));
     VkClearValue clear = {
-        .color = {1.f - flash, 0.f, flash, 1.f},
+        .color = {0, 0, 0, 1},
     };
 
     VkClearValue depth_clear;
@@ -149,10 +161,12 @@ void Engine::draw() {
     rp_info.renderArea.offset.y = 0;
     rp_info.renderArea.extent = _window_extent;
 
+    /*
     glm::mat4 spin = glm::rotate(
         glm::mat4{1.f}, glm::radians(_frame_number * 0.8f), glm::vec3(0, 1, 0));
     _scene[0].transform = glm::scale(
         glm::translate(spin, glm::vec3{0.f, 5.f, 0.f}), glm::vec3(5.f));
+    */
 
     vkCmdBeginRenderPass(f.cmd, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
     draw_objects(f.cmd, _scene);
@@ -290,7 +304,8 @@ void Engine::init_swapchain() {
     vkb::SwapchainBuilder swapchain_builder{_phys_device, _device, _surface};
     vkb::Swapchain swapchain =
         swapchain_builder.use_default_format_selection()
-            .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)  // hard vsync
+            .set_desired_present_mode(
+                VK_PRESENT_MODE_IMMEDIATE_KHR)  // no vsync
             .set_desired_extent(_window_extent.width, _window_extent.height)
             .build()
             .value();
@@ -822,8 +837,11 @@ void Engine::init_pipelines() {
 }
 
 void Engine::load_meshes() {
-    auto tri_mesh = Mesh::make_simple_triangle();
-    upload_mesh(tri_mesh);
+    // auto tri_mesh = Mesh::make_point_cloud(10e6);
+    auto tri_mesh = Mesh::load_from_obj(ASSETS_DIRECTORY "building.obj");
+    std::cout << "size: " << tri_mesh.verts.size() << "\n";
+    PRINT_RUN_TIME("Uploading point cloud (stagingbuf)", upload_mesh(tri_mesh));
+    // PRINT_RUN_TIME("Uploading point cloud (old)", upload_mesh_old(tri_mesh));
     _meshes["tri"] = tri_mesh;
     auto monkey_mesh = Mesh::load_from_obj(ASSETS_DIRECTORY "monkey.obj");
     upload_mesh(monkey_mesh);
@@ -831,9 +849,6 @@ void Engine::load_meshes() {
 }
 
 void Engine::upload_mesh(Mesh& mesh) {
-    // upload_mesh_old(mesh);
-    // return;
-
     // Create staging buffer
     const size_t buf_size = mesh.verts.size() * sizeof(Vert);
 
@@ -953,8 +968,8 @@ Mesh* Engine::get_mesh(std::string const& name) {
 void Engine::draw_objects(VkCommandBuffer cmd,
                           std::vector<RenderObject> const& scene) {
     // camera
-    glm::vec3 cam_pos = {
-        0.f, 6.f * (0.95f + cos(_frame_number / 200.0f)), -10.f};
+    glm::vec3 cam_pos = {0, 0, -10};
+    //        0.f, 6.f * (0.95f + cos(_frame_number / 200.0f)), -10.f};
     auto view = glm::lookAt(cam_pos, glm::vec3{0, 4.f, 0}, glm::vec3{0, 1, 0});
     float aspect = (float)_window_extent.width / (float)_window_extent.height;
     glm::mat4 proj = glm::perspective(glm::radians(70.f), aspect, 0.1f, 200.f);
@@ -1047,11 +1062,12 @@ void Engine::draw_objects(VkCommandBuffer cmd,
 
 void Engine::init_scene() {
     RenderObject monkey = {
-        .mesh = get_mesh("monkey"),
+        .mesh = get_mesh("tri"),
         .mat = get_mat("mesh"),
         .transform = glm::mat4{1.0f},
     };
     _scene.push_back(monkey);
+    return;
 
     int radius = 40;
     for (int x = -radius; x <= radius; ++x) {

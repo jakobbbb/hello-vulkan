@@ -1,6 +1,7 @@
 #include "vk_mesh.h"
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
+#include <cstdlib>
 #include <iostream>
 
 VertInputDesc Vert::get_desc() {
@@ -49,6 +50,23 @@ Mesh Mesh::make_simple_triangle() {
                         .color = {1, 0, 0},
                     },
                 }};
+}
+
+Mesh Mesh::make_point_cloud(size_t count) {
+    std::vector<Vert> verts{};
+    for (size_t i = 0; i < count; ++i) {
+        glm::vec3 pos{
+            (float)std::rand() / (float)RAND_MAX - 0.5f,
+            (float)std::rand() / (float)RAND_MAX - 0.5f,
+            (float)std::rand() / (float)RAND_MAX - 0.5f,
+        };
+        Vert v{
+            .pos = pos,
+            .color = {1, 1, 0},
+        };
+        verts.push_back(v);
+    }
+    return Mesh{.verts = verts};
 }
 
 Mesh Mesh::load_from_obj(const char* file_path) {
