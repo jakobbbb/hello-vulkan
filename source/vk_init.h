@@ -59,6 +59,11 @@ VkWriteDescriptorSet write_descriptor_buffer(VkDescriptorType type,
                                              VkDescriptorBufferInfo* buf_info,
                                              uint32_t binding);
 
+VkCommandBufferBeginInfo command_buffer_begin_info(
+    VkCommandBufferUsageFlags flags = 0);
+
+VkSubmitInfo submit_info(VkCommandBuffer* cmd);
+
 }  // namespace vkinit
 
 #endif  // VK_INIT_H

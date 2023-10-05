@@ -231,3 +231,29 @@ VkWriteDescriptorSet vkinit::write_descriptor_buffer(
     };
     return set_write;
 }
+
+VkCommandBufferBeginInfo vkinit::command_buffer_begin_info(
+    VkCommandBufferUsageFlags flags) {
+    VkCommandBufferBeginInfo info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .pNext = nullptr,
+        .flags = flags,
+        .pInheritanceInfo = nullptr,
+    };
+    return info;
+}
+
+VkSubmitInfo vkinit::submit_info(VkCommandBuffer* cmd) {
+    VkSubmitInfo info = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext = nullptr,
+        .waitSemaphoreCount = 0,
+        .pWaitSemaphores = nullptr,
+        .pWaitDstStageMask = nullptr,
+        .commandBufferCount = 1,
+        .pCommandBuffers = cmd,
+        .signalSemaphoreCount = 0,
+        .pSignalSemaphores = nullptr,
+    };
+    return info;
+}

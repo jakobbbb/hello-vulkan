@@ -12,7 +12,7 @@
 #include "vk_types.h"
 
 #define APP_NAME "Vulkan Engine"
-#define TIMEOUT_SECOND 1000000000  // ns
+static constexpr uint64_t TIMEOUT_SECOND = 1000000000;  // ns
 #define SHADER_DIRECTORY "../shaders/"
 // #define PRINT_DRAW_TIME
 
@@ -331,6 +331,20 @@ void Engine::init_commands() {
         ENQUEUE_DELETE(
             vkDestroyCommandPool(_device, _frames[i].command_pool, nullptr));
     }
+
+    // create upload command pool
+    auto upload_command_pool_info =
+        vkinit::command_pool_create_info(_gfx_queue_family);
+    VK_CHECK(vkCreateCommandPool(_device,
+                                 &upload_command_pool_info,
+                                 nullptr,
+                                 &_upload_context.command_pool));
+    ENQUEUE_DELETE(
+        vkDestroyCommandPool(_device, _upload_context.command_pool, nullptr));
+    auto upload_command_info =
+        vkinit::command_buffer_allocate_info(_upload_context.command_pool, 1);
+    VK_CHECK(vkAllocateCommandBuffers(
+        _device, &upload_command_info, &_upload_context.cmd));
 }
 
 void Engine::init_default_renderpass() {
@@ -451,6 +465,7 @@ void Engine::init_framebuffers() {
 }
 
 void Engine::init_sync_structures() {
+    // signeled bit: wait on this fence before sending commands
     auto fence_info = vkinit::fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
     auto sema_info = vkinit::semaphore_create_info();
 
@@ -469,6 +484,13 @@ void Engine::init_sync_structures() {
         ENQUEUE_DELETE(
             vkDestroySemaphore(_device, _frames[i].render_semaphore, nullptr));
     }
+
+    // upload fence
+    VkFenceCreateInfo upload_fence_info = vkinit::fence_create_info();
+    VK_CHECK(vkCreateFence(
+        _device, &upload_fence_info, nullptr, &_upload_context.upload_fence));
+    ENQUEUE_DELETE(
+        vkDestroyFence(_device, _upload_context.upload_fence, nullptr));
 }
 
 bool Engine::try_load_shader_module(const char* file_path,
@@ -791,6 +813,75 @@ void Engine::load_meshes() {
 }
 
 void Engine::upload_mesh(Mesh& mesh) {
+    // upload_mesh_old(mesh);
+    // return;
+
+    // Create staging buffer
+    const size_t buf_size = mesh.verts.size() * sizeof(Vert);
+
+    VkBufferCreateInfo staging_buf_info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .pNext = nullptr,
+        .size = buf_size,
+        .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    };
+
+    VmaAllocationCreateInfo staging_alloc_info = {
+        .usage = VMA_MEMORY_USAGE_CPU_ONLY,
+    };
+
+    AllocatedBuffer staging_buf;
+    VK_CHECK(vmaCreateBuffer(_allocator,
+                             &staging_buf_info,
+                             &staging_alloc_info,
+                             &staging_buf.buf,
+                             &staging_buf.alloc,
+                             nullptr));
+
+    // copy vertex data to staging buffer
+    void* data;
+    vmaMapMemory(_allocator, staging_buf.alloc, &data);
+    memcpy(data, mesh.verts.data(), mesh.verts.size() * sizeof(Vert));
+    vmaUnmapMemory(_allocator, staging_buf.alloc);
+
+    // create and allocate vertex buffer on gpu
+    VkBufferCreateInfo vertex_buf_info{staging_buf_info};
+    vertex_buf_info.usage =
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    VmaAllocationCreateInfo vertex_alloc_info = {
+        .usage = VMA_MEMORY_USAGE_GPU_ONLY,
+    };
+    VK_CHECK(vmaCreateBuffer(_allocator,
+                             &vertex_buf_info,
+                             &vertex_alloc_info,
+                             &mesh.buf.buf,
+                             &mesh.buf.alloc,
+                             nullptr));
+
+    // copy to GPU
+    immediate_submit([=](auto cmd) {
+        VkBufferCopy copy = {
+            .srcOffset = 0,
+            .dstOffset = 0,
+            .size = buf_size,
+        };
+
+        assert(nullptr != staging_buf.buf);
+        assert(nullptr != mesh.buf.buf);
+
+        vkCmdCopyBuffer(cmd,
+                        staging_buf.buf,  // src
+                        mesh.buf.buf,     // dst
+                        1,                // region count
+                        &copy);
+    });
+
+    // cleanup: staging buffer can be destroyed immedeately
+    vmaDestroyBuffer(_allocator, staging_buf.buf, staging_buf.alloc);
+    ENQUEUE_DELETE(vmaDestroyBuffer(_allocator, mesh.buf.buf, mesh.buf.alloc));
+}
+
+void Engine::upload_mesh_old(Mesh& mesh) {
     auto buf_info = vkinit::buffer_create_info(
         mesh.verts.size() * sizeof(Vert), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
@@ -1000,4 +1091,31 @@ size_t Engine::pad_uniform_buf_size(size_t original_size) const {
             (aligned_size + min_alignment - 1) & ~(min_alignment - 1);
     }
     return aligned_size;
+}
+
+void Engine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& fun) {
+    VkCommandBuffer cmd = _upload_context.cmd;
+
+    // flag: buffer will be used once before resetting
+    auto cmd_begin_info = vkinit::command_buffer_begin_info(
+        VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+    // record to cmd
+    VK_CHECK(vkBeginCommandBuffer(cmd, &cmd_begin_info));
+    fun(cmd);
+    VK_CHECK(vkEndCommandBuffer(cmd));
+
+    // submit to queue, execute, wait and reset
+    auto submit = vkinit::submit_info(&cmd);
+    // we could use a separate queue here, e.g. to load from a separate thread
+    VK_CHECK(
+        vkQueueSubmit(_gfx_queue, 1, &submit, _upload_context.upload_fence));
+    vkWaitForFences(_device,
+                    1,
+                    &_upload_context.upload_fence,
+                    VK_TRUE,
+                    100 * TIMEOUT_SECOND);
+    vkResetFences(_device, 1, &_upload_context.upload_fence);
+
+    vkResetCommandPool(_device, _upload_context.command_pool, 0);
 }

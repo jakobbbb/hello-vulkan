@@ -77,6 +77,12 @@ struct GPUObjectData {
     glm::mat4 model_mat;
 };
 
+struct UploadContext {
+    VkFence upload_fence;
+    VkCommandPool command_pool;
+    VkCommandBuffer cmd;
+};
+
 class Engine {
    public:
     VkPhysicalDeviceProperties _gpu_properties;
@@ -149,6 +155,9 @@ class Engine {
     GPUSceneData _scene_data;
     AllocatedBuffer _scene_data_buf;
 
+    // Uploading to GPU
+    UploadContext _upload_context;
+
     // Methods
     void init();
     void cleanup();
@@ -171,6 +180,7 @@ class Engine {
 
     void load_meshes();
     void upload_mesh(Mesh& mesh);
+    void upload_mesh_old(Mesh& mesh);
 
     Material* create_mat(VkPipeline pipeline,
                          VkPipelineLayout layout,
@@ -186,6 +196,7 @@ class Engine {
                                   VmaMemoryUsage memory_usage);
 
     size_t pad_uniform_buf_size(size_t original_size) const;
+    void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& fun);
 };
 
 #endif  // ENGINE_H
