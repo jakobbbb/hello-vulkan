@@ -5,6 +5,7 @@ layout (location = 1) in vec3 vNormal;
 layout (location = 2) in vec3 vColor;
 
 layout (location = 0) out vec3 outColor;
+layout (location = 1) out float outDist;
 
 // Decriptor set at slot 0
 // Binding 0 within that set
@@ -32,4 +33,5 @@ void main() {
     mat4 transform = CameraData.viewproj * model;
     gl_Position = transform * vec4(vPos, 1.0f);
     outColor = vColor;
+    outDist = gl_Position.z / gl_Position.w;
 }

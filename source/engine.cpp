@@ -129,7 +129,13 @@ void Engine::draw() {
 
     float flash = abs(sin(_frame_number / 120.f));
     VkClearValue clear = {
-        .color = {1.f - flash, 0.f, flash, 1.f},
+        .color =
+            {
+                _scene_data.fog_color.r,
+                _scene_data.fog_color.g,
+                _scene_data.fog_color.b,
+                1.0f,
+            },
     };
 
     VkClearValue depth_clear;
@@ -971,7 +977,11 @@ void Engine::draw_objects(VkCommandBuffer cmd,
     vmaUnmapMemory(_allocator, get_current_frame().cam_buf.alloc);
 
     // scene metadata
-    _scene_data.ambient_color = {1, 0.3, 0.3, 1};
+    _scene_data.ambient_color = {0.1f, 0.0f, 0.4f, 1};
+    _scene_data.fog_color = {0.2f, 0.15f, 0.5f, 1.0f};
+    _scene_data.fog_distances.x = 0.986f;
+    _scene_data.fog_distances.y = 0.994f;
+
     // copy scene metadata
     char* p_scene_data;
     vmaMapMemory(_allocator, _scene_data_buf.alloc, (void**)&p_scene_data);
