@@ -21,7 +21,7 @@ static constexpr uint64_t TIMEOUT_SECOND = 1000000000;  // ns
         VkResult err = x;                                 \
         if (err) {                                        \
             std::cout << "Vulkan error: " << err << "\n"; \
-            abort();                                      \
+            throw std::runtime_error("Vulkan error.");    \
         }                                                 \
     } while (0)
 #define ENQUEUE_DELETE(x) _del_queue.push([=]() { x; })
