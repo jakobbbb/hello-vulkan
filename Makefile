@@ -7,7 +7,7 @@ EXTERNAL_DIR = external
 CMAKE_FLAGS =
 
 .PHONY: build
-build: prepare-build shaders
+build: prepare-build shaders assets/building.obj
 	$(MAKE) -C $(BUILD_DIR)
 
 .PHONY: build-tests
@@ -62,3 +62,7 @@ clean:
 	rm -fr $(BUILD_DIR)/
 	find . -name "CMakeCache.txt" -exec rm {} \;
 	rm -fr $(EXTERNAL_DIR)/VulkanMemoryAllocator/build
+	rm -fr assets/building.obj
+
+assets/building.obj:
+	cd assets && gunzip -k building.obj.gz
