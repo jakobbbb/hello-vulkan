@@ -2,6 +2,7 @@
 #include "engine.h"
 #include <SDL.h>
 #include <SDL_vulkan.h>
+#include <vulkan/vk_enum_string_helper.h>
 #include <chrono>
 #include <fstream>
 #include <glm/ext/matrix_clip_space.hpp>
@@ -17,13 +18,14 @@ static constexpr uint64_t TIMEOUT_SECOND = 1000000000;  // ns
 #define SHADER_DIRECTORY "../shaders/"
 #define PRINT_DRAW_TIME
 
-#define VK_CHECK(x)                                       \
-    do {                                                  \
-        VkResult err = x;                                 \
-        if (err) {                                        \
-            std::cout << "Vulkan error: " << err << "\n"; \
-            throw std::runtime_error("Vulkan error.");    \
-        }                                                 \
+#define VK_CHECK(x)                                                       \
+    do {                                                                  \
+        VkResult err = x;                                                 \
+        if (err) {                                                        \
+            std::cout << "Vulkan error: " << string_VkResult(err) << " (" \
+                      << err << ")\n";                                    \
+            throw std::runtime_error("Vulkan error.");                    \
+        }                                                                 \
     } while (0)
 #define ENQUEUE_DELETE(x) _del_queue.push([=]() { x; })
 
