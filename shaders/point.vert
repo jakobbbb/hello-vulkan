@@ -32,7 +32,7 @@ void main() {
     mat4 model = objectBuffer.objects[gl_BaseInstance].model_mat;
     mat4 transform = CameraData.viewproj * model;
     gl_Position = transform * vec4(vPos, 1.0f);
-    gl_PointSize = 1.0f;
     outColor = vColor;
     outDist = gl_Position.z / gl_Position.w;
+    gl_PointSize = 3.f * pow(1.0f / outDist, 2);
 }

@@ -184,6 +184,7 @@ class Engine {
     void init_descriptors();
     void init_pipelines();
     void init_pointcloud_pipeline();
+    void init_materials();
     void init_scene();
 
     bool try_load_shader_module(const char* file_path, VkShaderModule* out);

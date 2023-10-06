@@ -55,6 +55,7 @@ void Engine::init() {
     std::cout << "Initializing Pipelines...\n";
     init_pipelines();
     init_pointcloud_pipeline();
+    init_materials();
 
     std::cout << "Loading Meshes...\n";
     load_meshes();
@@ -826,9 +827,10 @@ void Engine::init_pipelines() {
         vkDestroyPipelineLayout(_device, _tri_pipeline_layout, nullptr));
     ENQUEUE_DELETE(
         vkDestroyPipelineLayout(_device, _mesh_pipeline_layout, nullptr));
+}
 
-    // create Materials
-    create_mat(_mesh_pipeline, _mesh_pipeline_layout, "mesh");
+void Engine::init_materials() {
+    create_mat(_point_pipeline.pipeline, _point_pipeline.layout, "mesh");
 }
 
 void Engine::load_meshes() {
@@ -887,6 +889,8 @@ void Engine::init_pointcloud_pipeline() {
     _point_pipeline.pipeline = builder.build_pipeline(_device, _render_pass);
     ENQUEUE_DELETE(
         vkDestroyPipeline(_device, _point_pipeline.pipeline, nullptr));
+    std::cout << "after creation: Point pipeline is "
+              << _point_pipeline.pipeline << "\n";
 
     // shader modules can be destroted immedeately
     vkDestroyShaderModule(_device, frag, nullptr);
