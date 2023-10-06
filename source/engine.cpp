@@ -840,8 +840,7 @@ void Engine::load_meshes() {
     auto tri_mesh = Mesh::make_simple_triangle();
     upload_mesh(tri_mesh);
     _meshes["tri"] = tri_mesh;
-    auto monkey_mesh =
-        Mesh::load_from_obj(ASSETS_DIRECTORY "monkey.obj", false);
+    auto monkey_mesh = Mesh::make_point_cloud(1e6);
     upload_mesh(monkey_mesh);  // ~12ms/83.5fps
     // upload_mesh_old(monkey_mesh);  // ~90ms/11fps
     _meshes["monkey"] = monkey_mesh;
