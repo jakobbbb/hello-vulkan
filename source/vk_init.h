@@ -2,6 +2,7 @@
 #define VK_INIT_H
 
 #include <vulkan/vulkan.h>
+#include "vk_mesh.h"
 
 namespace vkinit {
 
@@ -19,6 +20,8 @@ VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_info(
     VkShaderModule shader_module);
 
 VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info();
+VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info(
+    VertInputDesc const& desc);
 
 VkPipelineInputAssemblyStateCreateInfo vertex_input_assembly_create_info(
     VkPrimitiveTopology topology);

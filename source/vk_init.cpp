@@ -44,9 +44,21 @@ VkPipelineVertexInputStateCreateInfo vkinit::vertex_input_state_create_info() {
     VkPipelineVertexInputStateCreateInfo info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .pNext = nullptr,
-        .vertexBindingDescriptionCount = 0,    // soon
-        .vertexAttributeDescriptionCount = 0,  // soon
+        .vertexBindingDescriptionCount = 0,
+        .pVertexBindingDescriptions = nullptr,
+        .vertexAttributeDescriptionCount = 0,
+        .pVertexAttributeDescriptions = nullptr,
     };
+    return info;
+}
+
+VkPipelineVertexInputStateCreateInfo vkinit::vertex_input_state_create_info(
+    VertInputDesc const& desc) {
+    auto info = vkinit::vertex_input_state_create_info();
+    info.vertexBindingDescriptionCount = desc.bindings.size();
+    info.pVertexBindingDescriptions = desc.bindings.data();
+    info.vertexAttributeDescriptionCount = desc.attribs.size();
+    info.pVertexAttributeDescriptions = desc.attribs.data();
     return info;
 }
 

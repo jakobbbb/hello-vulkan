@@ -83,9 +83,15 @@ struct UploadContext {
     VkCommandBuffer cmd;
 };
 
+struct PointPipeline {
+    VkPipelineLayout layout;
+    VkPipeline pipeline;
+};
+
 class Engine {
    public:
     VkPhysicalDeviceProperties _gpu_properties;
+    VkPhysicalDeviceFeatures _gpu_features;
 
     bool _is_initialized{false};
     int _frame_number{0};
@@ -159,6 +165,8 @@ class Engine {
     // Uploading to GPU
     UploadContext _upload_context;
 
+    PointPipeline _point_pipeline;
+
     // Methods
     void init();
     void cleanup();
@@ -175,6 +183,7 @@ class Engine {
     void init_sync_structures();
     void init_descriptors();
     void init_pipelines();
+    void init_pointcloud_pipeline();
     void init_scene();
 
     bool try_load_shader_module(const char* file_path, VkShaderModule* out);
@@ -198,6 +207,10 @@ class Engine {
 
     size_t pad_uniform_buf_size(size_t original_size) const;
     void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& fun);
+
+    // Helpers for pipeline init
+    VkViewport get_viewport() const;
+    VkRect2D get_scissor() const;
 };
 
 #endif  // ENGINE_H

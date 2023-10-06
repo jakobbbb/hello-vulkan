@@ -54,6 +54,7 @@ void Engine::init() {
 
     std::cout << "Initializing Pipelines...\n";
     init_pipelines();
+    init_pointcloud_pipeline();
 
     std::cout << "Loading Meshes...\n";
     load_meshes();
@@ -265,13 +266,21 @@ void Engine::init_vulkan() {
                                        .value();
 
     vkb::DeviceBuilder dev_builder{phys_dev};
-    VkPhysicalDeviceShaderDrawParametersFeatures features = {
+    VkPhysicalDeviceFeatures2 features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext = nullptr,
+    };
+    features.features.fillModeNonSolid = VK_TRUE;
+    VkPhysicalDeviceShaderDrawParametersFeatures features_draw_params = {
         .sType =
             VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES,
         .pNext = nullptr,
         .shaderDrawParameters = VK_TRUE,
     };
-    vkb::Device dev = dev_builder.add_pNext(&features).build().value();
+    vkb::Device dev = dev_builder.add_pNext(&features)
+                          .add_pNext(&features_draw_params)
+                          .build()
+                          .value();
 
     _device = dev.device;
     _phys_device = dev.physical_device;
@@ -290,6 +299,7 @@ void Engine::init_vulkan() {
     ENQUEUE_DELETE(vmaDestroyAllocator(_allocator));
 
     _gpu_properties = dev.physical_device.properties;
+    _gpu_features = dev.physical_device.features;
 }
 
 void Engine::init_swapchain() {
@@ -792,14 +802,8 @@ void Engine::init_pipelines() {
     _tri_rgb_pipeline = builder.build_pipeline(_device, _render_pass);
 
     auto vert_desc = Vert::get_desc();
-    builder._vert_input_info.pVertexAttributeDescriptions =
-        vert_desc.attribs.data();
-    builder._vert_input_info.vertexAttributeDescriptionCount =
-        vert_desc.attribs.size();
-    builder._vert_input_info.pVertexBindingDescriptions =
-        vert_desc.bindings.data();
-    builder._vert_input_info.vertexBindingDescriptionCount =
-        vert_desc.bindings.size();
+    builder._vert_input_info =
+        vkinit::vertex_input_state_create_info(vert_desc);
 
     builder._stages.clear();
     builder._stages.push_back(vert_mesh);
@@ -834,6 +838,59 @@ void Engine::load_meshes() {
     auto monkey_mesh = Mesh::load_from_obj(ASSETS_DIRECTORY "monkey.obj");
     upload_mesh(monkey_mesh);
     _meshes["monkey"] = monkey_mesh;
+}
+
+void Engine::init_pointcloud_pipeline() {
+    // Shaders
+    VkShaderModule vert;
+    try_load_shader_module(SHADER_DIRECTORY "point.vert.spv", &vert);
+    auto vert_info = vkinit::pipeline_shader_stage_create_info(
+        VK_SHADER_STAGE_VERTEX_BIT, vert);
+
+    VkShaderModule frag;
+    try_load_shader_module(SHADER_DIRECTORY "point.frag.spv", &frag);
+    auto frag_info = vkinit::pipeline_shader_stage_create_info(
+        VK_SHADER_STAGE_FRAGMENT_BIT, frag);
+
+    // Descriptor sets
+    VkDescriptorSetLayout descriptor_set_layouts[] = {
+        _global_set_layout,
+        _obj_set_layout,
+    };
+
+    // Layout
+    auto layout_info = vkinit::pipeline_layout_create_info();
+    layout_info.setLayoutCount = 2;
+    layout_info.pSetLayouts = descriptor_set_layouts;
+    VK_CHECK(vkCreatePipelineLayout(
+        _device, &layout_info, nullptr, &_point_pipeline.layout));
+    ENQUEUE_DELETE(
+        vkDestroyPipelineLayout(_device, _point_pipeline.layout, nullptr));
+
+    // build pipeline itself
+    auto vert_desc = Vert::get_desc();
+    PipelineBuilder builder = {
+        ._stages = {vert_info, frag_info},
+        ._vert_input_info = vkinit::vertex_input_state_create_info(vert_desc),
+        ._input_assembly = vkinit::vertex_input_assembly_create_info(
+            VK_PRIMITIVE_TOPOLOGY_POINT_LIST),
+        ._viewport = get_viewport(),
+        ._scissor = get_scissor(),
+        ._rasterizer =
+            vkinit::rasterization_state_create_info(VK_POLYGON_MODE_POINT),
+        ._color_blend_att = vkinit::color_blend_attachment_state(),
+        ._multisampling = vkinit::multisampling_state_create_info(),
+        ._layout = _point_pipeline.layout,
+        ._depth_stencil = vkinit::depth_stencil_create_info(
+            true, true, VK_COMPARE_OP_LESS_OR_EQUAL),
+    };
+    _point_pipeline.pipeline = builder.build_pipeline(_device, _render_pass);
+    ENQUEUE_DELETE(
+        vkDestroyPipeline(_device, _point_pipeline.pipeline, nullptr));
+
+    // shader modules can be destroted immedeately
+    vkDestroyShaderModule(_device, frag, nullptr);
+    vkDestroyShaderModule(_device, vert, nullptr);
 }
 
 void Engine::upload_mesh(Mesh& mesh) {
@@ -1146,4 +1203,24 @@ void Engine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& fun) {
     vkResetFences(_device, 1, &_upload_context.upload_fence);
 
     vkResetCommandPool(_device, _upload_context.command_pool, 0);
+}
+
+VkViewport Engine::get_viewport() const {
+    VkViewport viewport = {
+        .x = 0.f,
+        .y = 0.f,
+        .width = (float)_window_extent.width,
+        .height = (float)_window_extent.height,
+        .minDepth = 0.f,
+        .maxDepth = 1.f,
+    };
+    return viewport;
+}
+
+VkRect2D Engine::get_scissor() const {
+    VkRect2D scissor = {
+        .offset = {0, 0},
+        .extent = _window_extent,
+    };
+    return scissor;
 }
