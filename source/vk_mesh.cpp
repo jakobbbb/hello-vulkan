@@ -61,7 +61,7 @@ Mesh Mesh::make_point_cloud(size_t count) {
         };
         Vert v{
             .pos = pos,
-            .color = {1, 1, 0},
+            .color = pos + 0.5f,
         };
         verts.push_back(v);
     }

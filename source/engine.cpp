@@ -837,9 +837,13 @@ void Engine::load_meshes() {
     auto tri_mesh = Mesh::make_simple_triangle();
     upload_mesh(tri_mesh);
     _meshes["tri"] = tri_mesh;
-    auto monkey_mesh = Mesh::load_from_obj(ASSETS_DIRECTORY "building.obj");
-    upload_mesh(monkey_mesh);
+    auto monkey_mesh = Mesh::make_point_cloud(5e7);
+    upload_mesh(monkey_mesh);  // ~12ms/83.5fps
+    // upload_mesh_old(monkey_mesh);  // ~90ms/11fps
     _meshes["monkey"] = monkey_mesh;
+    std::cout << "'Monkey' mesh has " << monkey_mesh.verts.size() / 1e6
+              << "M verts, buffer is " << monkey_mesh.buf.alloc->GetSize() / 1e6
+              << "MB).\n";
 }
 
 void Engine::init_pointcloud_pipeline() {
@@ -1036,7 +1040,7 @@ void Engine::draw_objects(VkCommandBuffer cmd,
     vmaUnmapMemory(_allocator, get_current_frame().cam_buf.alloc);
 
     // scene metadata
-    _scene_data.ambient_color = {0.1f, 0.0f, 0.4f, 1};
+    _scene_data.ambient_color = {0.0f, 0.0f, 0.0f, 1};
     _scene_data.fog_color = {0.2f, 0.15f, 0.5f, 1.0f};
     _scene_data.fog_distances.x = 0.986f;
     _scene_data.fog_distances.y = 0.994f;
