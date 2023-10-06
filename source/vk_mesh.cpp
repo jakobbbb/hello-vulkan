@@ -51,6 +51,23 @@ Mesh Mesh::make_simple_triangle() {
                 }};
 }
 
+Mesh Mesh::make_point_cloud(size_t count) {
+    std::vector<Vert> verts{};
+    for (size_t i = 0; i < count; ++i) {
+        glm::vec3 pos{
+            (float)std::rand() / (float)RAND_MAX - 0.5f,
+            (float)std::rand() / (float)RAND_MAX - 0.5f,
+            (float)std::rand() / (float)RAND_MAX - 0.5f,
+        };
+        Vert v{
+            .pos = pos,
+            .color = {1, 1, 0},
+        };
+        verts.push_back(v);
+    }
+    return Mesh{.verts = verts};
+}
+
 Mesh Mesh::load_from_obj(const char* file_path) {
     tinyobj::attrib_t attrib;  // vertex arrays
     std::vector<tinyobj::shape_t> shapes;

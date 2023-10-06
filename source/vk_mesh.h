@@ -24,8 +24,10 @@ struct Vert {
 struct Mesh {
     std::vector<Vert> verts;
     AllocatedBuffer buf;
+
     static Mesh make_simple_triangle();
     static Mesh load_from_obj(const char* file_path);
+    static Mesh make_point_cloud(size_t count);
 };
 
 #endif  // VK_MESH_H
