@@ -1,6 +1,7 @@
 #ifndef VK_MESH_H
 #define VK_MESH_H
 
+#include <tiny_obj_loader.h>
 #include <glm/vec3.hpp>
 #include <vector>
 #include "vk_types.h"
@@ -19,6 +20,9 @@ struct Vert {
     glm::vec3 color;
 
     static VertInputDesc get_desc();
+    static Vert from_idx(tinyobj::attrib_t const& attrib,
+                         size_t vertex_idx,
+                         size_t normal_idx);
 };
 
 struct Mesh {
@@ -26,7 +30,7 @@ struct Mesh {
     AllocatedBuffer buf;
 
     static Mesh make_simple_triangle();
-    static Mesh load_from_obj(const char* file_path);
+    static Mesh load_from_obj(const char* file_path, bool with_tris = true);
     static Mesh make_point_cloud(size_t count);
 };
 

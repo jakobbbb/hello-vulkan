@@ -830,14 +830,16 @@ void Engine::init_pipelines() {
 }
 
 void Engine::init_materials() {
-    create_mat(_point_pipeline.pipeline, _point_pipeline.layout, "mesh");
+    create_mat(_mesh_pipeline, _mesh_pipeline_layout, "mesh");
+    create_mat(_point_pipeline.pipeline, _point_pipeline.layout, "points");
 }
 
 void Engine::load_meshes() {
     auto tri_mesh = Mesh::make_simple_triangle();
     upload_mesh(tri_mesh);
     _meshes["tri"] = tri_mesh;
-    auto monkey_mesh = Mesh::make_point_cloud(5e7);
+    auto monkey_mesh =
+        Mesh::load_from_obj(ASSETS_DIRECTORY "monkey.obj", false);
     upload_mesh(monkey_mesh);  // ~12ms/83.5fps
     // upload_mesh_old(monkey_mesh);  // ~90ms/11fps
     _meshes["monkey"] = monkey_mesh;
@@ -1121,7 +1123,7 @@ void Engine::draw_objects(VkCommandBuffer cmd,
 void Engine::init_scene() {
     RenderObject monkey = {
         .mesh = get_mesh("monkey"),
-        .mat = get_mat("mesh"),
+        .mat = get_mat("points"),
         .transform = glm::mat4{1.0f},
     };
     _scene.push_back(monkey);
