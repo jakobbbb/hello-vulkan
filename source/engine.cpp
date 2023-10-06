@@ -889,8 +889,6 @@ void Engine::init_pointcloud_pipeline() {
     _point_pipeline.pipeline = builder.build_pipeline(_device, _render_pass);
     ENQUEUE_DELETE(
         vkDestroyPipeline(_device, _point_pipeline.pipeline, nullptr));
-    std::cout << "after creation: Point pipeline is "
-              << _point_pipeline.pipeline << "\n";
 
     // shader modules can be destroted immedeately
     vkDestroyShaderModule(_device, frag, nullptr);
