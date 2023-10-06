@@ -837,7 +837,7 @@ void Engine::load_meshes() {
     auto tri_mesh = Mesh::make_simple_triangle();
     upload_mesh(tri_mesh);
     _meshes["tri"] = tri_mesh;
-    auto monkey_mesh = Mesh::load_from_obj(ASSETS_DIRECTORY "monkey.obj");
+    auto monkey_mesh = Mesh::load_from_obj(ASSETS_DIRECTORY "building.obj");
     upload_mesh(monkey_mesh);
     _meshes["monkey"] = monkey_mesh;
 }
@@ -1121,6 +1121,7 @@ void Engine::init_scene() {
         .transform = glm::mat4{1.0f},
     };
     _scene.push_back(monkey);
+    return;
 
     int radius = 40;
     for (int x = -radius; x <= radius; ++x) {
