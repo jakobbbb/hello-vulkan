@@ -67,11 +67,17 @@ std::vector<Vert> Vert::from_anim(Apple* anim, int frame) {
                 Vert v{
                     .pos = {vx - 0.5f, vy - 0.5f, vz / 50.0f},
                 };
+                v.pos = 2.f * v.pos;
                 v.normal = v.pos;
-                v.color = v.pos;
+                v.color = (v.pos + 0.5f) / 2.f;
                 verts.push_back(v);
             }
         }
+    }
+    Vert v{.pos = {-10000, 0, 0}};
+    int pad = (anim->h * anim->w) - verts.size();
+    for (int i = 0; i < pad; ++i) {
+        verts.push_back(v);
     }
     free(buf);
     return verts;

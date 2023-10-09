@@ -222,7 +222,7 @@ void Engine::run() {
 #ifdef PRINT_DRAW_TIME
         auto start = std::chrono::high_resolution_clock::now();
 #endif
-        // update_meshes();
+        update_meshes();
         draw();
 #ifdef PRINT_DRAW_TIME
         auto end = std::chrono::high_resolution_clock::now();
@@ -856,7 +856,6 @@ void Engine::load_meshes() {
 }
 
 void Engine::update_meshes() {
-    return;
     auto new_verts = Vert::from_anim(&_apple, _frame_number);
     _meshes["monkey"].verts = new_verts;
     upload_mesh(_meshes["monkey"], false);  // ~12ms/83.5fps
