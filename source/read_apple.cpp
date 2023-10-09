@@ -10,13 +10,13 @@
 #define WIDTH 640
 #define HEIGHT 360
 #define FRAME_SIZE WIDTH* HEIGHT / 8
-#define N_FRAMES 600
+#define N_FRAMES 6574
 
 void apple_open(struct Apple* a) {
     a->f = fopen(APPLE_FILE, "rb");
     assert(nullptr != a->f);
     a->frame_size = FRAME_SIZE;
-    a->frame_count = FRAME_NO;
+    a->frame_count = N_FRAMES;
     a->w = WIDTH;
     a->h = HEIGHT;
 }
