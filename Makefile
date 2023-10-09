@@ -7,7 +7,7 @@ EXTERNAL_DIR = external
 CMAKE_FLAGS =
 
 .PHONY: build
-build: prepare-build shaders assets/building.obj
+build: prepare-build shaders assets/building.obj assets/apple.bin
 	$(MAKE) -C $(BUILD_DIR)
 
 .PHONY: build-tests
@@ -66,3 +66,6 @@ clean:
 
 assets/building.obj:
 	cd assets && gunzip -k building.obj.gz
+
+assets/apple.bin:
+	cd assets && gunzip -k apple.bin.gz

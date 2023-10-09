@@ -10,6 +10,7 @@ add_executable(main
     pipeline_builder.cpp
     vk_init.cpp
     vk_mesh.cpp
+    read_apple.cpp
 )
 
 target_link_libraries(main ${LIBRARIES})

@@ -53,6 +53,30 @@ Vert Vert::from_idx(tinyobj::attrib_t const& attrib,
     return vert;
 }
 
+std::vector<Vert> Vert::from_anim(Apple* anim, int frame) {
+    std::vector<Vert> verts;
+    char* buf = (char*)malloc(sizeof(char) * anim->frame_size);
+    apple_read_frame(anim, buf, frame);
+    float aspect = anim->w / anim->h;
+    for (int y = 0; y < anim->h; ++y) {
+        for (int x = 0; x < anim->w; ++x) {
+            if (apple_get_pixel(buf, x, y) > 0) {
+                float vx = aspect * ((float)x / (float)anim->w);
+                float vy = 1.0f - ((float)y / (float)anim->h);
+                float vz = (float)std::rand() / (float)RAND_MAX - 0.5f;
+                Vert v{
+                    .pos = {vx - 0.5f, vy - 0.5f, vz / 50.0f},
+                };
+                v.normal = v.pos;
+                v.color = v.pos;
+                verts.push_back(v);
+            }
+        }
+    }
+    free(buf);
+    return verts;
+}
+
 Mesh Mesh::make_simple_triangle() {
     return Mesh{.verts = {
                     {

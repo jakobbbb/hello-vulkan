@@ -5,6 +5,7 @@
 #include <glm/vec3.hpp>
 #include <memory>
 #include <vector>
+#include "read_apple.h"
 #include "vk_types.h"
 
 #define ASSETS_DIRECTORY "../../assets/"
@@ -24,6 +25,7 @@ struct Vert {
     static Vert from_idx(tinyobj::attrib_t const& attrib,
                          size_t vertex_idx,
                          size_t normal_idx);
+    static std::vector<Vert> from_anim(Apple* anim, int frame);
 };
 
 struct Mesh {

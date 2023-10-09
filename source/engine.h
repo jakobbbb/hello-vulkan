@@ -8,6 +8,7 @@
 #include <functional>
 #include <glm/glm.hpp>
 #include <iostream>
+#include "read_apple.h"
 #include "vk_mesh.h"
 #include "vk_types.h"
 
@@ -152,6 +153,7 @@ class Engine {
     std::vector<RenderObject> _scene;
     std::unordered_map<std::string, Material> _materials;
     std::unordered_map<std::string, Mesh> _meshes;
+    Apple _apple;
 
     // Descriptor stuff
     VkDescriptorSetLayout _global_set_layout;

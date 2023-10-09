@@ -222,7 +222,7 @@ void Engine::run() {
 #ifdef PRINT_DRAW_TIME
         auto start = std::chrono::high_resolution_clock::now();
 #endif
-        update_meshes();
+        // update_meshes();
         draw();
 #ifdef PRINT_DRAW_TIME
         auto end = std::chrono::high_resolution_clock::now();
@@ -841,7 +841,13 @@ void Engine::load_meshes() {
     auto tri_mesh = Mesh::make_simple_triangle();
     upload_mesh(tri_mesh);
     _meshes["tri"] = tri_mesh;
-    auto monkey_mesh = Mesh::make_point_cloud(1e6);
+
+    // apple time!!
+    apple_open(&_apple);
+    ENQUEUE_DELETE(apple_close(&_apple));
+
+    auto monkey_mesh = Mesh::make_point_cloud(_apple.frame_size);
+    monkey_mesh.verts = Vert::from_anim(&_apple, 200);
     upload_mesh(monkey_mesh);  // ~12ms/83.5fps
     _meshes["monkey"] = monkey_mesh;
     std::cout << "'Monkey' mesh has " << monkey_mesh.verts.size() / 1e6
@@ -850,8 +856,8 @@ void Engine::load_meshes() {
 }
 
 void Engine::update_meshes() {
-    auto new_verts =
-        Mesh::make_point_cloud(_meshes["monkey"].verts.size()).verts;
+    return;
+    auto new_verts = Vert::from_anim(&_apple, _frame_number);
     _meshes["monkey"].verts = new_verts;
     upload_mesh(_meshes["monkey"], false);  // ~12ms/83.5fps
 }
