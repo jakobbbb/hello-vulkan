@@ -856,7 +856,8 @@ void Engine::load_meshes() {
 }
 
 void Engine::update_meshes() {
-    auto new_verts = Vert::from_anim(&_apple, _frame_number);
+    auto new_verts =
+        Vert::from_anim(&_apple, _frame_number % _apple.frame_count);
     _meshes["monkey"].verts = new_verts;
     upload_mesh(_meshes["monkey"], false);  // ~12ms/83.5fps
 }
