@@ -3,6 +3,7 @@
 
 #include <tiny_obj_loader.h>
 #include <glm/vec3.hpp>
+#include <memory>
 #include <vector>
 #include "vk_types.h"
 
@@ -27,7 +28,8 @@ struct Vert {
 
 struct Mesh {
     std::vector<Vert> verts;
-    AllocatedBuffer buf;
+    std::shared_ptr<AllocatedBuffer> buf;
+    std::shared_ptr<AllocatedBuffer> staging_buf;
 
     static Mesh make_simple_triangle();
     static Mesh load_from_obj(const char* file_path, bool with_tris = true);

@@ -222,6 +222,7 @@ void Engine::run() {
 #ifdef PRINT_DRAW_TIME
         auto start = std::chrono::high_resolution_clock::now();
 #endif
+        update_meshes();
         draw();
 #ifdef PRINT_DRAW_TIME
         auto end = std::chrono::high_resolution_clock::now();
@@ -842,11 +843,17 @@ void Engine::load_meshes() {
     _meshes["tri"] = tri_mesh;
     auto monkey_mesh = Mesh::make_point_cloud(1e6);
     upload_mesh(monkey_mesh);  // ~12ms/83.5fps
-    // upload_mesh_old(monkey_mesh);  // ~90ms/11fps
     _meshes["monkey"] = monkey_mesh;
     std::cout << "'Monkey' mesh has " << monkey_mesh.verts.size() / 1e6
-              << "M verts, buffer is " << monkey_mesh.buf.alloc->GetSize() / 1e6
-              << "MB).\n";
+              << "M verts, buffer is "
+              << monkey_mesh.buf->alloc->GetSize() / 1e6 << "MB).\n";
+}
+
+void Engine::update_meshes() {
+    auto new_verts =
+        Mesh::make_point_cloud(_meshes["monkey"].verts.size()).verts;
+    _meshes["monkey"].verts = new_verts;
+    upload_mesh(_meshes["monkey"], false);  // ~12ms/83.5fps
 }
 
 void Engine::init_pointcloud_pipeline() {
@@ -902,51 +909,52 @@ void Engine::init_pointcloud_pipeline() {
     vkDestroyShaderModule(_device, vert, nullptr);
 }
 
-void Engine::upload_mesh(Mesh& mesh) {
-    // upload_mesh_old(mesh);
-    // return;
-
+void Engine::upload_mesh(Mesh& mesh, bool create_bufs) {
     // Create staging buffer
     const size_t buf_size = mesh.verts.size() * sizeof(Vert);
 
-    VkBufferCreateInfo staging_buf_info = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .pNext = nullptr,
-        .size = buf_size,
-        .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-    };
+    if (create_bufs) {
+        VkBufferCreateInfo staging_buf_info = {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .pNext = nullptr,
+            .size = buf_size,
+            .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        };
 
-    VmaAllocationCreateInfo staging_alloc_info = {
-        .usage = VMA_MEMORY_USAGE_CPU_ONLY,
-    };
+        VmaAllocationCreateInfo staging_alloc_info = {
+            .usage = VMA_MEMORY_USAGE_CPU_ONLY,
+        };
 
-    AllocatedBuffer staging_buf;
-    VK_CHECK(vmaCreateBuffer(_allocator,
-                             &staging_buf_info,
-                             &staging_alloc_info,
-                             &staging_buf.buf,
-                             &staging_buf.alloc,
-                             nullptr));
+        mesh.buf = std::make_shared<AllocatedBuffer>();
+        mesh.staging_buf = std::make_shared<AllocatedBuffer>();
+
+        VK_CHECK(vmaCreateBuffer(_allocator,
+                                 &staging_buf_info,
+                                 &staging_alloc_info,
+                                 &mesh.staging_buf->buf,
+                                 &mesh.staging_buf->alloc,
+                                 nullptr));
+
+        // create and allocate vertex buffer on gpu
+        VkBufferCreateInfo vertex_buf_info{staging_buf_info};
+        vertex_buf_info.usage =
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        VmaAllocationCreateInfo vertex_alloc_info = {
+            .usage = VMA_MEMORY_USAGE_GPU_ONLY,
+        };
+        VK_CHECK(vmaCreateBuffer(_allocator,
+                                 &vertex_buf_info,
+                                 &vertex_alloc_info,
+                                 &mesh.buf->buf,
+                                 &mesh.buf->alloc,
+                                 nullptr));
+    }
 
     // copy vertex data to staging buffer
     void* data;
-    vmaMapMemory(_allocator, staging_buf.alloc, &data);
+    vmaMapMemory(_allocator, mesh.staging_buf->alloc, &data);
     memcpy(data, mesh.verts.data(), mesh.verts.size() * sizeof(Vert));
-    vmaUnmapMemory(_allocator, staging_buf.alloc);
-
-    // create and allocate vertex buffer on gpu
-    VkBufferCreateInfo vertex_buf_info{staging_buf_info};
-    vertex_buf_info.usage =
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    VmaAllocationCreateInfo vertex_alloc_info = {
-        .usage = VMA_MEMORY_USAGE_GPU_ONLY,
-    };
-    VK_CHECK(vmaCreateBuffer(_allocator,
-                             &vertex_buf_info,
-                             &vertex_alloc_info,
-                             &mesh.buf.buf,
-                             &mesh.buf.alloc,
-                             nullptr));
+    vmaUnmapMemory(_allocator, mesh.staging_buf->alloc);
 
     // copy to GPU
     immediate_submit([=](auto cmd) {
@@ -956,19 +964,23 @@ void Engine::upload_mesh(Mesh& mesh) {
             .size = buf_size,
         };
 
-        assert(nullptr != staging_buf.buf);
-        assert(nullptr != mesh.buf.buf);
+        assert(nullptr != mesh.staging_buf->buf);
+        assert(nullptr != mesh.buf->buf);
 
         vkCmdCopyBuffer(cmd,
-                        staging_buf.buf,  // src
-                        mesh.buf.buf,     // dst
-                        1,                // region count
+                        mesh.staging_buf->buf,  // src
+                        mesh.buf->buf,          // dst
+                        1,                      // region count
                         &copy);
     });
 
-    // cleanup: staging buffer can be destroyed immedeately
-    vmaDestroyBuffer(_allocator, staging_buf.buf, staging_buf.alloc);
-    ENQUEUE_DELETE(vmaDestroyBuffer(_allocator, mesh.buf.buf, mesh.buf.alloc));
+    if (create_bufs) {
+        // cleanup: staging buffer can be destroyed immedeately
+        ENQUEUE_DELETE(vmaDestroyBuffer(
+            _allocator, mesh.staging_buf->buf, mesh.staging_buf->alloc));
+        ENQUEUE_DELETE(
+            vmaDestroyBuffer(_allocator, mesh.buf->buf, mesh.buf->alloc));
+    }
 }
 
 void Engine::upload_mesh_old(Mesh& mesh) {
@@ -983,16 +995,17 @@ void Engine::upload_mesh_old(Mesh& mesh) {
     VK_CHECK(vmaCreateBuffer(_allocator,
                              &buf_info,
                              &alloc_info,
-                             &mesh.buf.buf,
-                             &mesh.buf.alloc,
+                             &mesh.buf->buf,
+                             &mesh.buf->alloc,
                              nullptr));
-    ENQUEUE_DELETE(vmaDestroyBuffer(_allocator, mesh.buf.buf, mesh.buf.alloc));
+    ENQUEUE_DELETE(
+        vmaDestroyBuffer(_allocator, mesh.buf->buf, mesh.buf->alloc));
 
     // upload vertex data
     void* data;
-    vmaMapMemory(_allocator, mesh.buf.alloc, &data);
+    vmaMapMemory(_allocator, mesh.buf->alloc, &data);
     memcpy(data, mesh.verts.data(), mesh.verts.size() * sizeof(Vert));
-    vmaUnmapMemory(_allocator, mesh.buf.alloc);  // write finished, so unmap
+    vmaUnmapMemory(_allocator, mesh.buf->alloc);  // write finished, so unmap
 }
 
 Material* Engine::create_mat(VkPipeline pipeline,
@@ -1113,7 +1126,7 @@ void Engine::draw_objects(VkCommandBuffer cmd,
             vkCmdBindVertexBuffers(cmd,
                                    0,  // first binding
                                    1,  // binding count
-                                   &(obj.mesh->buf.buf),
+                                   &(obj.mesh->buf->buf),
                                    &offset);
         }
 

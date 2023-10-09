@@ -190,7 +190,8 @@ class Engine {
     bool try_load_shader_module(const char* file_path, VkShaderModule* out);
 
     void load_meshes();
-    void upload_mesh(Mesh& mesh);
+    void update_meshes();
+    void upload_mesh(Mesh& mesh, bool create_bufs = true);
     void upload_mesh_old(Mesh& mesh);
 
     Material* create_mat(VkPipeline pipeline,
