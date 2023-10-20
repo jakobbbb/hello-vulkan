@@ -13,6 +13,9 @@
 
 #define FRAME_OVERLAP 2
 
+// TODO:  Refactor hello-vulkan specific structs/members/functions into separate
+// `HelloEngine` class.
+
 struct DeletionQueue {
     std::deque<std::function<void()>> deletors;
 
@@ -173,7 +176,12 @@ class Engine {
     void draw();
     void run();
 
-   private:
+   protected:
+    /**
+     * Initialization functions.
+     * TODO: Add parameters where nescessary or mark virtual.
+     */
+
     void init_sdl();
     void init_vulkan();
     void init_swapchain();
@@ -187,11 +195,20 @@ class Engine {
     void init_materials();
     void init_scene();
 
+    /** Load a compiled shader from `file_path` into VkShaderModule `out`. */
     bool try_load_shader_module(const char* file_path, VkShaderModule* out);
 
     void load_meshes();
     void update_meshes();
+
+    /**
+     * Upload mesh using a staging buffer.
+     */
     void upload_mesh(Mesh& mesh, bool create_bufs = true);
+
+    /**
+     * Upload mesh using a HOST_VISIBLE and DEVICE_LOCAL buffer.
+     */
     void upload_mesh_old(Mesh& mesh);
 
     Material* create_mat(VkPipeline pipeline,
@@ -199,20 +216,28 @@ class Engine {
                          std::string const& name);
     Material* get_mat(std::string const& name);
     Mesh* get_mesh(std::string const& name);
-    void draw_objects(VkCommandBuffer cmd,
-                      std::vector<RenderObject> const& scene);
 
+    /**
+     * Called during the render pass.  Place draw commands etc. here.
+     */
+    virtual void render_pass(VkCommandBuffer cmd);
+
+    /**
+     * Get the current frame, out of the frames in flight.
+     */
     FrameData& get_current_frame();
+
     AllocatedBuffer create_buffer(size_t size,
                                   VkBufferUsageFlags usage,
                                   VmaMemoryUsage memory_usage);
 
+    // TODO Could maybe be a static util function?
     size_t pad_uniform_buf_size(size_t original_size) const;
     void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& fun);
 
     // Helpers for pipeline init
-    VkViewport get_viewport() const;
-    VkRect2D get_scissor() const;
+    VkViewport get_viewport() const;  // TODO should be a member
+    VkRect2D get_scissor() const;     // TODO should be a member
 };
 
 #endif  // ENGINE_H

@@ -165,7 +165,7 @@ void Engine::draw() {
         glm::translate(spin, glm::vec3{0.f, 5.f, 0.f}), glm::vec3(5.f));
 
     vkCmdBeginRenderPass(f.cmd, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
-    draw_objects(f.cmd, _scene);
+    render_pass(f.cmd);
     vkCmdEndRenderPass(f.cmd);
 
     VK_CHECK(vkEndCommandBuffer(f.cmd));
@@ -1035,8 +1035,7 @@ Mesh* Engine::get_mesh(std::string const& name) {
     return p;
 }
 
-void Engine::draw_objects(VkCommandBuffer cmd,
-                          std::vector<RenderObject> const& scene) {
+void Engine::render_pass(VkCommandBuffer cmd) {
     // camera
     glm::vec3 cam_pos = {
         0.f, 6.f * (0.95f + cos(_frame_number / 200.0f)), -10.f};
@@ -1073,8 +1072,8 @@ void Engine::draw_objects(VkCommandBuffer cmd,
     void* p_obj_data;
     vmaMapMemory(_allocator, get_current_frame().obj_buf.alloc, &p_obj_data);
     GPUObjectData* objectSSBO = (GPUObjectData*)p_obj_data;
-    for (int i = 0; i < scene.size(); ++i) {
-        auto obj = scene[i];
+    for (int i = 0; i < _scene.size(); ++i) {
+        auto obj = _scene[i];
         objectSSBO[i].model_mat = obj.transform;
     }
     vmaUnmapMemory(_allocator, get_current_frame().obj_buf.alloc);
