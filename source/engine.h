@@ -3,6 +3,7 @@
 
 #include <VkBootstrap.h>
 #include <vk_mem_alloc.h>
+#include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan.h>
 #include <deque>
 #include <functional>
@@ -12,6 +13,17 @@
 #include "vk_types.h"
 
 #define FRAME_OVERLAP 2
+
+#define VK_CHECK(x)                                                       \
+    do {                                                                  \
+        VkResult err = x;                                                 \
+        if (err) {                                                        \
+            std::cout << "Vulkan error: " << string_VkResult(err) << " (" \
+                      << err << ")\n";                                    \
+            throw std::runtime_error("Vulkan error.");                    \
+        }                                                                 \
+    } while (0)
+#define ENQUEUE_DELETE(x) _del_queue.push([=]() { x; })
 
 struct DeletionQueue {
     std::deque<std::function<void()>> deletors;
@@ -62,15 +74,6 @@ struct FrameData {
 
     AllocatedBuffer obj_buf;
     VkDescriptorSet obj_descriptor;
-};
-
-// Rule of thumb:  Only vec4 and mat4
-struct GPUSceneData {
-    glm::vec4 fog_color;
-    glm::vec4 fog_distances;  // min, max, unused, unused
-    glm::vec4 ambient_color;
-    glm::vec4 sun_direction;  // x, y, z, power
-    glm::vec4 sun_color;
 };
 
 struct GPUObjectData {
@@ -158,10 +161,6 @@ class Engine {
     VkDescriptorSetLayout _obj_set_layout;
     VkDescriptorPool _descriptor_pool;
 
-    // Scene
-    GPUSceneData _scene_data;
-    AllocatedBuffer _scene_data_buf;
-
     // Uploading to GPU
     UploadContext _upload_context;
 
@@ -186,11 +185,11 @@ class Engine {
     void init_default_renderpass();
     void init_framebuffers();
     void init_sync_structures();
-    void init_descriptors();
+    virtual void init_descriptors() = 0;
     void init_pipelines();
     void init_pointcloud_pipeline();
     void init_materials();
-    void init_scene();
+    virtual void init_scene() = 0;
 
     /** Load a compiled shader from `file_path` into VkShaderModule `out`. */
     bool try_load_shader_module(const char* file_path, VkShaderModule* out);
@@ -217,7 +216,7 @@ class Engine {
     /**
      * Called during the render pass.  Place draw commands etc. here.
      */
-    virtual void render_pass(VkCommandBuffer cmd);
+    virtual void render_pass(VkCommandBuffer cmd) = 0;
 
     /**
      * Get the current frame, out of the frames in flight.
