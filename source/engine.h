@@ -12,7 +12,11 @@
 #include "vk_mesh.h"
 #include "vk_types.h"
 
+#ifndef FRAME_OVERLAP
 #define FRAME_OVERLAP 2
+#endif  // FRAME_OVERLAP
+
+#define SHADER_DIRECTORY "../shaders/"
 
 #define VK_CHECK(x)                                                       \
     do {                                                                  \
@@ -86,11 +90,6 @@ struct UploadContext {
     VkCommandBuffer cmd;
 };
 
-struct PointPipeline {
-    VkPipelineLayout layout;
-    VkPipeline pipeline;
-};
-
 class Engine {
    public:
     VkPhysicalDeviceProperties _gpu_properties;
@@ -157,14 +156,10 @@ class Engine {
     std::unordered_map<std::string, Mesh> _meshes;
 
     // Descriptor stuff
-    VkDescriptorSetLayout _global_set_layout;
-    VkDescriptorSetLayout _obj_set_layout;
     VkDescriptorPool _descriptor_pool;
 
     // Uploading to GPU
     UploadContext _upload_context;
-
-    PointPipeline _point_pipeline;
 
     // Methods
     void init();
@@ -186,26 +181,14 @@ class Engine {
     void init_framebuffers();
     void init_sync_structures();
     virtual void init_descriptors() = 0;
-    void init_pipelines();
-    void init_pointcloud_pipeline();
-    void init_materials();
-    virtual void init_scene() = 0;
+    virtual void init_pipelines() = 0;
+    virtual void init_materials() = 0;
+    virtual void init_scene(){};
 
     /** Load a compiled shader from `file_path` into VkShaderModule `out`. */
     bool try_load_shader_module(const char* file_path, VkShaderModule* out);
 
-    void load_meshes();
-    void update_meshes();
-
-    /**
-     * Upload mesh using a staging buffer.
-     */
-    void upload_mesh(Mesh& mesh, bool create_bufs = true);
-
-    /**
-     * Upload mesh using a HOST_VISIBLE and DEVICE_LOCAL buffer.
-     */
-    void upload_mesh_old(Mesh& mesh);
+    virtual void load_meshes() = 0;
 
     Material* create_mat(VkPipeline pipeline,
                          VkPipelineLayout layout,

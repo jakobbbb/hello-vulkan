@@ -1,6 +1,9 @@
+#define VMA_IMPLEMENTATION
+
 #include "hello_engine.h"
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include "pipeline_builder.h"
 #include "vk_init.h"
 #include "vk_types.h"
 
@@ -157,7 +160,295 @@ void HelloEngine::init_descriptors() {
     }
 }
 
+void HelloEngine::init_pipelines() {
+    // shaders
+    try_load_shader_module(SHADER_DIRECTORY "triangle.frag.spv", &_tri_frag);
+    try_load_shader_module(SHADER_DIRECTORY "triangle.vert.spv", &_tri_vert);
+    try_load_shader_module(SHADER_DIRECTORY "default_lit.frag.spv",
+                           &_tri_rgb_frag);
+    try_load_shader_module(SHADER_DIRECTORY "tri_rgb.vert.spv", &_tri_rgb_vert);
+    try_load_shader_module(SHADER_DIRECTORY "tri_mesh.vert.spv",
+                           &_tri_mesh_vert);
+
+    auto vert = vkinit::pipeline_shader_stage_create_info(
+        VK_SHADER_STAGE_VERTEX_BIT, _tri_vert);
+    auto frag = vkinit::pipeline_shader_stage_create_info(
+        VK_SHADER_STAGE_FRAGMENT_BIT, _tri_frag);
+    auto vert_rgb = vkinit::pipeline_shader_stage_create_info(
+        VK_SHADER_STAGE_VERTEX_BIT, _tri_rgb_vert);
+    auto frag_rgb = vkinit::pipeline_shader_stage_create_info(
+        VK_SHADER_STAGE_FRAGMENT_BIT, _tri_rgb_frag);
+    auto vert_mesh = vkinit::pipeline_shader_stage_create_info(
+        VK_SHADER_STAGE_VERTEX_BIT, _tri_mesh_vert);
+
+    VkDescriptorSetLayout descriptor_set_layouts[] = {
+        _global_set_layout,
+        _obj_set_layout,
+    };
+    // Layout (Tri)
+    VkPipelineLayoutCreateInfo layout_info =
+        vkinit::pipeline_layout_create_info();
+    layout_info.setLayoutCount = 2;  // default_lit.frag uses sceneData,
+                                     // so we need to add the set layout for
+                                     // this pipeline too
+    layout_info.pSetLayouts = descriptor_set_layouts;
+    VK_CHECK(vkCreatePipelineLayout(
+        _device, &layout_info, nullptr, &_tri_pipeline_layout));
+
+    // Layout (Mesh)
+    VkPipelineLayoutCreateInfo layout_info_mesh =
+        vkinit::pipeline_layout_create_info();
+    VkPushConstantRange push_constant = {
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        .offset = 0,
+        .size = sizeof(MeshPushConstants),
+    };
+    layout_info_mesh.pPushConstantRanges = &push_constant;
+    layout_info_mesh.pushConstantRangeCount = 1;
+    layout_info_mesh.setLayoutCount = 2;
+    layout_info_mesh.pSetLayouts = descriptor_set_layouts;
+    VK_CHECK(vkCreatePipelineLayout(
+        _device, &layout_info_mesh, nullptr, &_mesh_pipeline_layout));
+
+    // Pipeline
+    PipelineBuilder builder;
+    builder._depth_stencil = vkinit::depth_stencil_create_info(
+        true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
+    builder._stages.push_back(vert);
+    builder._stages.push_back(frag);
+    builder._vert_input_info =
+        vkinit::vertex_input_state_create_info();  // soon...
+    builder._input_assembly = vkinit::vertex_input_assembly_create_info(
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+    builder._viewport = get_viewport();
+    builder._scissor = get_scissor();
+
+    builder._rasterizer =
+        vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
+
+    builder._multisampling = vkinit::multisampling_state_create_info();
+
+    builder._color_blend_att = vkinit::color_blend_attachment_state();
+
+    builder._layout = _tri_pipeline_layout;
+
+    _tri_pipeline = builder.build_pipeline(_device, _render_pass);
+
+    builder._stages.clear();
+    builder._stages.push_back(vert_rgb);
+    builder._stages.push_back(frag_rgb);
+    _tri_rgb_pipeline = builder.build_pipeline(_device, _render_pass);
+
+    auto vert_desc = Vert::get_desc();
+    builder._vert_input_info =
+        vkinit::vertex_input_state_create_info(vert_desc);
+
+    builder._stages.clear();
+    builder._stages.push_back(vert_mesh);
+    builder._stages.push_back(frag_rgb);
+
+    builder._layout = _mesh_pipeline_layout;
+    _mesh_pipeline = builder.build_pipeline(_device, _render_pass);
+
+    // pipelines created, so we can delete the shader modules
+    vkDestroyShaderModule(_device, _tri_frag, nullptr);
+    vkDestroyShaderModule(_device, _tri_vert, nullptr);
+    vkDestroyShaderModule(_device, _tri_rgb_frag, nullptr);
+    vkDestroyShaderModule(_device, _tri_rgb_vert, nullptr);
+    vkDestroyShaderModule(_device, _tri_mesh_vert, nullptr);
+
+    ENQUEUE_DELETE(vkDestroyPipeline(_device, _tri_pipeline, nullptr));
+    ENQUEUE_DELETE(vkDestroyPipeline(_device, _tri_rgb_pipeline, nullptr));
+    ENQUEUE_DELETE(vkDestroyPipeline(_device, _mesh_pipeline, nullptr));
+    ENQUEUE_DELETE(
+        vkDestroyPipelineLayout(_device, _tri_pipeline_layout, nullptr));
+    ENQUEUE_DELETE(
+        vkDestroyPipelineLayout(_device, _mesh_pipeline_layout, nullptr));
+
+    // Also init pipeline for point clouds
+    init_pointcloud_pipeline();
+}
+
+void HelloEngine::init_materials() {
+    create_mat(_mesh_pipeline, _mesh_pipeline_layout, "mesh");
+    create_mat(
+        _point_pipeline.pipeline, _point_pipeline.pipeline_layout, "points");
+}
+
+void HelloEngine::load_meshes() {
+    auto tri_mesh = Mesh::make_simple_triangle();
+    upload_mesh(tri_mesh);
+    _meshes["tri"] = tri_mesh;
+    auto monkey_mesh = Mesh::make_point_cloud(1e6);
+    upload_mesh(monkey_mesh);  // ~12ms/83.5fps
+    _meshes["monkey"] = monkey_mesh;
+    std::cout << "'Monkey' mesh has " << monkey_mesh.verts.size() / 1e6
+              << "M verts, buffer is "
+              << monkey_mesh.buf->alloc->GetSize() / 1e6 << "MB).\n";
+}
+
+void HelloEngine::update_meshes() {
+    auto new_verts =
+        Mesh::make_point_cloud(_meshes["monkey"].verts.size()).verts;
+    _meshes["monkey"].verts = new_verts;
+    upload_mesh(_meshes["monkey"], false);  // ~12ms/83.5fps
+}
+
+void HelloEngine::init_pointcloud_pipeline() {
+    // Shaders
+    VkShaderModule vert;
+    try_load_shader_module(SHADER_DIRECTORY "point.vert.spv", &vert);
+    auto vert_info = vkinit::pipeline_shader_stage_create_info(
+        VK_SHADER_STAGE_VERTEX_BIT, vert);
+
+    VkShaderModule frag;
+    try_load_shader_module(SHADER_DIRECTORY "point.frag.spv", &frag);
+    auto frag_info = vkinit::pipeline_shader_stage_create_info(
+        VK_SHADER_STAGE_FRAGMENT_BIT, frag);
+
+    // Descriptor sets
+    VkDescriptorSetLayout descriptor_set_layouts[] = {
+        _global_set_layout,
+        _obj_set_layout,
+    };
+
+    // Layout
+    auto layout_info = vkinit::pipeline_layout_create_info();
+    layout_info.setLayoutCount = 2;
+    layout_info.pSetLayouts = descriptor_set_layouts;
+    VK_CHECK(vkCreatePipelineLayout(
+        _device, &layout_info, nullptr, &_point_pipeline.pipeline_layout));
+    ENQUEUE_DELETE(vkDestroyPipelineLayout(
+        _device, _point_pipeline.pipeline_layout, nullptr));
+
+    // build pipeline itself
+    auto vert_desc = Vert::get_desc();
+    PipelineBuilder builder = {
+        ._stages = {vert_info, frag_info},
+        ._vert_input_info = vkinit::vertex_input_state_create_info(vert_desc),
+        ._input_assembly = vkinit::vertex_input_assembly_create_info(
+            VK_PRIMITIVE_TOPOLOGY_POINT_LIST),
+        ._viewport = get_viewport(),
+        ._scissor = get_scissor(),
+        ._rasterizer =
+            vkinit::rasterization_state_create_info(VK_POLYGON_MODE_POINT),
+        ._color_blend_att = vkinit::color_blend_attachment_state(),
+        ._multisampling = vkinit::multisampling_state_create_info(),
+        ._layout = _point_pipeline.pipeline_layout,
+        ._depth_stencil = vkinit::depth_stencil_create_info(
+            true, true, VK_COMPARE_OP_LESS_OR_EQUAL),
+    };
+    _point_pipeline.pipeline = builder.build_pipeline(_device, _render_pass);
+    ENQUEUE_DELETE(
+        vkDestroyPipeline(_device, _point_pipeline.pipeline, nullptr));
+
+    // shader modules can be destroted immedeately
+    vkDestroyShaderModule(_device, frag, nullptr);
+    vkDestroyShaderModule(_device, vert, nullptr);
+}
+
+void HelloEngine::upload_mesh(Mesh& mesh, bool create_bufs) {
+    // Create staging buffer
+    const size_t buf_size = mesh.verts.size() * sizeof(Vert);
+
+    if (create_bufs) {
+        VkBufferCreateInfo staging_buf_info = {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .pNext = nullptr,
+            .size = buf_size,
+            .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        };
+
+        VmaAllocationCreateInfo staging_alloc_info = {
+            .usage = VMA_MEMORY_USAGE_CPU_ONLY,
+        };
+
+        mesh.buf = std::make_shared<AllocatedBuffer>();
+        mesh.staging_buf = std::make_shared<AllocatedBuffer>();
+
+        VK_CHECK(vmaCreateBuffer(_allocator,
+                                 &staging_buf_info,
+                                 &staging_alloc_info,
+                                 &mesh.staging_buf->buf,
+                                 &mesh.staging_buf->alloc,
+                                 nullptr));
+
+        // create and allocate vertex buffer on gpu
+        VkBufferCreateInfo vertex_buf_info{staging_buf_info};
+        vertex_buf_info.usage =
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        VmaAllocationCreateInfo vertex_alloc_info = {
+            .usage = VMA_MEMORY_USAGE_GPU_ONLY,
+        };
+        VK_CHECK(vmaCreateBuffer(_allocator,
+                                 &vertex_buf_info,
+                                 &vertex_alloc_info,
+                                 &mesh.buf->buf,
+                                 &mesh.buf->alloc,
+                                 nullptr));
+    }
+
+    // copy vertex data to staging buffer
+    void* data;
+    vmaMapMemory(_allocator, mesh.staging_buf->alloc, &data);
+    memcpy(data, mesh.verts.data(), mesh.verts.size() * sizeof(Vert));
+    vmaUnmapMemory(_allocator, mesh.staging_buf->alloc);
+
+    // copy to GPU
+    immediate_submit([=](auto cmd) {
+        VkBufferCopy copy = {
+            .srcOffset = 0,
+            .dstOffset = 0,
+            .size = buf_size,
+        };
+
+        assert(nullptr != mesh.staging_buf->buf);
+        assert(nullptr != mesh.buf->buf);
+
+        vkCmdCopyBuffer(cmd,
+                        mesh.staging_buf->buf,  // src
+                        mesh.buf->buf,          // dst
+                        1,                      // region count
+                        &copy);
+    });
+
+    if (create_bufs) {
+        // cleanup: staging buffer can be destroyed immedeately
+        ENQUEUE_DELETE(vmaDestroyBuffer(
+            _allocator, mesh.staging_buf->buf, mesh.staging_buf->alloc));
+        ENQUEUE_DELETE(
+            vmaDestroyBuffer(_allocator, mesh.buf->buf, mesh.buf->alloc));
+    }
+}
+
+void HelloEngine::upload_mesh_old(Mesh& mesh) {
+    auto buf_info = vkinit::buffer_create_info(
+        mesh.verts.size() * sizeof(Vert), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+
+    VmaAllocationCreateInfo alloc_info = {
+        .usage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+    };
+
+    // allocate
+    VK_CHECK(vmaCreateBuffer(_allocator,
+                             &buf_info,
+                             &alloc_info,
+                             &mesh.buf->buf,
+                             &mesh.buf->alloc,
+                             nullptr));
+    ENQUEUE_DELETE(
+        vmaDestroyBuffer(_allocator, mesh.buf->buf, mesh.buf->alloc));
+
+    // upload vertex data
+    void* data;
+    vmaMapMemory(_allocator, mesh.buf->alloc, &data);
+    memcpy(data, mesh.verts.data(), mesh.verts.size() * sizeof(Vert));
+    vmaUnmapMemory(_allocator, mesh.buf->alloc);  // write finished, so unmap
+}
+
 void HelloEngine::render_pass(VkCommandBuffer cmd) {
+    update_meshes();
+
     // camera
     glm::vec3 cam_pos = {
         0.f, 6.f * (0.95f + cos(_frame_number / 200.0f)), -10.f};
