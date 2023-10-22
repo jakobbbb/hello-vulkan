@@ -1,8 +1,8 @@
 #include <iostream>
-#include "engine.h"
+#include "hello_engine.h"
 
 int main(int argc, char* argv[]) {
-    Engine engine;
+    HelloEngine engine;
     engine.init();
     engine.run();
     std::cout << "Cleaning up...\n";

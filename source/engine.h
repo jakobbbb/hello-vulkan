@@ -13,9 +13,6 @@
 
 #define FRAME_OVERLAP 2
 
-// TODO:  Refactor hello-vulkan specific structs/members/functions into separate
-// `HelloEngine` class.
-
 struct DeletionQueue {
     std::deque<std::function<void()>> deletors;
 
@@ -231,13 +228,15 @@ class Engine {
                                   VkBufferUsageFlags usage,
                                   VmaMemoryUsage memory_usage);
 
-    // TODO Could maybe be a static util function?
+    /**
+     * Pad `original_size` in accordance with minUniformBufferOffsetAlignment.
+     */
     size_t pad_uniform_buf_size(size_t original_size) const;
     void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& fun);
 
     // Helpers for pipeline init
-    VkViewport get_viewport() const;  // TODO should be a member
-    VkRect2D get_scissor() const;     // TODO should be a member
+    VkViewport get_viewport() const;
+    VkRect2D get_scissor() const;
 };
 
 #endif  // ENGINE_H

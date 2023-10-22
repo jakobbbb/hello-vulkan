@@ -778,16 +778,8 @@ void Engine::init_pipelines() {
         vkinit::vertex_input_state_create_info();  // soon...
     builder._input_assembly = vkinit::vertex_input_assembly_create_info(
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-
-    builder._viewport.x = 0.f;
-    builder._viewport.y = 0.f;
-    builder._viewport.width = _window_extent.width;
-    builder._viewport.height = _window_extent.height;
-    builder._viewport.minDepth = 0.f;
-    builder._viewport.maxDepth = 1.f;
-
-    builder._scissor.offset = {0, 0};
-    builder._scissor.extent = _window_extent;
+    builder._viewport = get_viewport();
+    builder._scissor = get_scissor();
 
     builder._rasterizer =
         vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
