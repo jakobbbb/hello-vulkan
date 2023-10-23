@@ -24,12 +24,36 @@ class HelloEngine : public Engine {
 
     Material _point_pipeline;
 
+    // Shader modules
+    VkShaderModule _tri_frag;
+    VkShaderModule _tri_vert;
+    VkShaderModule _tri_rgb_frag;
+    VkShaderModule _tri_rgb_vert;
+    VkShaderModule _tri_mesh_vert;
+
+    // Pipeline stuff
+    VkPipelineLayout _tri_pipeline_layout;
+    VkPipelineLayout _mesh_pipeline_layout;
+    VkPipeline _tri_pipeline;
+    VkPipeline _tri_rgb_pipeline;
+    VkPipeline _mesh_pipeline;
+
+    std::vector<RenderObject> _scene;
+    std::unordered_map<std::string, Material> _materials;
+    std::unordered_map<std::string, Mesh> _meshes;
+
    protected:
     virtual void init_descriptors() override;
     virtual void init_pipelines() override;
     void init_pointcloud_pipeline();
     virtual void init_materials() override;
     virtual void init_scene() override;
+
+    Material* create_mat(VkPipeline pipeline,
+                         VkPipelineLayout layout,
+                         std::string const& name);
+    Material* get_mat(std::string const& name);
+    Mesh* get_mesh(std::string const& name);
 
     virtual void load_meshes() override;
     void update_meshes();
@@ -43,6 +67,9 @@ class HelloEngine : public Engine {
      * Upload mesh using a HOST_VISIBLE and DEVICE_LOCAL buffer.
      */
     void upload_mesh_old(Mesh& mesh);
+
+    // Descriptor stuff
+    VkDescriptorPool _descriptor_pool;
 
     virtual void render_pass(VkCommandBuffer cmd) override;
 };

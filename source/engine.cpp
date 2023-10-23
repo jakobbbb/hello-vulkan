@@ -116,7 +116,6 @@ void Engine::draw() {
     // start recording
     VK_CHECK(vkBeginCommandBuffer(f.cmd, &begin_info));
 
-    float flash = abs(sin(_frame_number / 120.f));
     VkClearValue clear = {
         .color = {1.0f, 1.0f, 1.0f, 1.0f},
     };
@@ -137,11 +136,6 @@ void Engine::draw() {
     rp_info.renderArea.offset.x = 0;
     rp_info.renderArea.offset.y = 0;
     rp_info.renderArea.extent = _window_extent;
-
-    glm::mat4 spin = glm::rotate(
-        glm::mat4{1.f}, glm::radians(_frame_number * 0.8f), glm::vec3(0, 1, 0));
-    _scene[0].transform = glm::scale(
-        glm::translate(spin, glm::vec3{0.f, 5.f, 0.f}), glm::vec3(5.f));
 
     vkCmdBeginRenderPass(f.cmd, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
     render_pass(f.cmd);
@@ -541,33 +535,6 @@ bool Engine::try_load_shader_module(const char* file_path,
     }
     *out = shader_module;
     return true;
-}
-
-Material* Engine::create_mat(VkPipeline pipeline,
-                             VkPipelineLayout layout,
-                             std::string const& name) {
-    Material mat = {
-        .pipeline = pipeline,
-        .pipeline_layout = layout,
-    };
-    _materials[name] = mat;
-    return &_materials[name];
-}
-
-Material* Engine::get_mat(std::string const& name) {
-    auto it = _materials.find(name);
-    assert(it != _materials.end());
-    auto p = &((*it).second);
-    assert(p != nullptr);
-    return p;
-}
-
-Mesh* Engine::get_mesh(std::string const& name) {
-    auto it = _meshes.find(name);
-    assert(it != _meshes.end());
-    auto p = &((*it).second);
-    assert(p != nullptr);
-    return p;
 }
 
 FrameData& Engine::get_current_frame() {

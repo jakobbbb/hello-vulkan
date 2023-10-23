@@ -137,27 +137,6 @@ class Engine {
     // Sync
     FrameData _frames[FRAME_OVERLAP];
 
-    // Shader modules
-    VkShaderModule _tri_frag;
-    VkShaderModule _tri_vert;
-    VkShaderModule _tri_rgb_frag;
-    VkShaderModule _tri_rgb_vert;
-    VkShaderModule _tri_mesh_vert;
-
-    // Pipeline stuff
-    VkPipelineLayout _tri_pipeline_layout;
-    VkPipelineLayout _mesh_pipeline_layout;
-    VkPipeline _tri_pipeline;
-    VkPipeline _tri_rgb_pipeline;
-    VkPipeline _mesh_pipeline;
-
-    std::vector<RenderObject> _scene;
-    std::unordered_map<std::string, Material> _materials;
-    std::unordered_map<std::string, Mesh> _meshes;
-
-    // Descriptor stuff
-    VkDescriptorPool _descriptor_pool;
-
     // Uploading to GPU
     UploadContext _upload_context;
 
@@ -189,12 +168,6 @@ class Engine {
     bool try_load_shader_module(const char* file_path, VkShaderModule* out);
 
     virtual void load_meshes() = 0;
-
-    Material* create_mat(VkPipeline pipeline,
-                         VkPipelineLayout layout,
-                         std::string const& name);
-    Material* get_mat(std::string const& name);
-    Mesh* get_mesh(std::string const& name);
 
     /**
      * Called during the render pass.  Place draw commands etc. here.

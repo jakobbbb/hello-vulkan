@@ -576,3 +576,30 @@ void HelloEngine::init_scene() {
         }
     }
 }
+
+Material* HelloEngine::create_mat(VkPipeline pipeline,
+                                  VkPipelineLayout layout,
+                                  std::string const& name) {
+    Material mat = {
+        .pipeline = pipeline,
+        .pipeline_layout = layout,
+    };
+    _materials[name] = mat;
+    return &_materials[name];
+}
+
+Material* HelloEngine::get_mat(std::string const& name) {
+    auto it = _materials.find(name);
+    assert(it != _materials.end());
+    auto p = &((*it).second);
+    assert(p != nullptr);
+    return p;
+}
+
+Mesh* HelloEngine::get_mesh(std::string const& name) {
+    auto it = _meshes.find(name);
+    assert(it != _meshes.end());
+    auto p = &((*it).second);
+    assert(p != nullptr);
+    return p;
+}
