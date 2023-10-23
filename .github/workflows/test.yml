@@ -19,7 +19,7 @@ jobs:
                   cmake \
                   glslang-dev \
                   glslang-tools \
-                  libsdl2-dev \
+                  libglfw3-dev \
                   libvulkan-dev \
                   spirv-tools \
                   vulkan-tools \

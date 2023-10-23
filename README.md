@@ -14,7 +14,7 @@ or run `git submodule init && git submodule update` after cloning.
 
 ## Dependencies
 
-Most external libraries are included as git submodules.  Install SDL2,
+Most external libraries are included as git submodules.  Install glfw3,
 Vulkan itself and the necessary tools using your distro's package
 manager, e.g.:
 
@@ -25,7 +25,7 @@ apt install build-essential \
   cmake \
   glslang-dev \
   glslang-tools \
-  libsdl2-dev \
+  libglfw3-dev \
   libvulkan-dev \
   spirv-tools \
   vulkan-validationlayers-dev
@@ -36,8 +36,8 @@ Arch:
 pacman -S \
     base-devel \
     cmake \
+    glfw \
     glslang \
-    sdl2 \
     vulkan-headers \
     vulkan-validation-layers
 ```
