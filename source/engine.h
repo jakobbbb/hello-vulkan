@@ -1,6 +1,8 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
 #include <VkBootstrap.h>
 #include <vk_mem_alloc.h>
 #include <vulkan/vk_enum_string_helper.h>
@@ -102,7 +104,7 @@ class Engine {
     int _selected_shader{0};
 
     VkExtent2D _window_extent{1280, 720};
-    struct SDL_Window* _window{nullptr};
+    // struct SDL_Window* _window{nullptr};
 
     VmaAllocator _allocator;
 
@@ -152,7 +154,7 @@ class Engine {
      * TODO: Add parameters where nescessary or mark virtual.
      */
 
-    void init_sdl();
+    void init_glfw();
     void init_vulkan();
     void init_swapchain();
     void init_commands();

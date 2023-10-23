@@ -1,6 +1,4 @@
 #include "engine.h"
-#include <SDL.h>
-#include <SDL_vulkan.h>
 #include <chrono>
 #include <fstream>
 #include <glm/ext/matrix_clip_space.hpp>
@@ -16,8 +14,8 @@ static constexpr uint64_t TIMEOUT_SECOND = 1000000000;  // ns
 #define PRINT_DRAW_TIME
 
 void Engine::init() {
-    std::cout << "Initializing SDL...\n";
-    init_sdl();
+    std::cout << "Initializing GLFW...\n";
+    init_glfw();
 
     std::cout << "Initializing Vulkan...\n";
     init_vulkan();
@@ -75,7 +73,7 @@ void Engine::cleanup() {
     vkDestroyInstance(_instance, nullptr);
 
     // window
-    SDL_DestroyWindow(_window);
+    // SDL_DestroyWindow(_window); TODO
 
 #ifdef PRINT_DRAW_TIME
     std::cout << "Drew " << _frame_number << " frames.\n";
@@ -177,6 +175,7 @@ void Engine::draw() {
 }
 
 void Engine::run() {
+    /* TODO
     SDL_Event ev;
     bool run = true;
 
@@ -204,9 +203,11 @@ void Engine::run() {
         _draw_times[_frame_number % _draw_times.size()] = ms;
 #endif
     }
+    */
 }
 
-void Engine::init_sdl() {
+void Engine::init_glfw() {
+    /* TODO
     SDL_Init(SDL_INIT_VIDEO);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)SDL_WINDOW_VULKAN;
 
@@ -216,6 +217,7 @@ void Engine::init_sdl() {
                                _window_extent.width,
                                _window_extent.height,
                                window_flags);
+    */
 }
 
 void Engine::init_vulkan() {
@@ -233,7 +235,7 @@ void Engine::init_vulkan() {
     _debug_messenger = inst.debug_messenger;
 
     // Device
-    SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
+    // SDL_Vulkan_CreateSurface(_window, _instance, &_surface);  TODO
 
     vkb::PhysicalDeviceSelector selector{inst};
     vkb::PhysicalDevice phys_dev = selector.set_minimum_version(1, 1)

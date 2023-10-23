@@ -11,10 +11,10 @@ add_subdirectory(${EXTERNAL_DIR})
 # GLM
 include_directories(${EXTERNAL_DIR}/glm)
 
-# SDL2
-find_package(SDL2 REQUIRED)
-include_directories(${SDL2_INCLUDE_DIRS})
-set(LIBRARIES ${LIBRARIES} ${SDL2_LIBRARIES})
+# glfw
+find_package(glfw3 REQUIRED)
+include_directories(${GLFW_INCLUDE_DIRS})
+set(LIBRARIES ${LIBRARIES} glfw)
 
 # ImGui
 include_directories(${EXTERNAL_DIR}/imgui)
