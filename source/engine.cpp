@@ -179,18 +179,7 @@ void Engine::run() {
     bool run = true;
 
     while (run) {
-        /* TODO adapt for glfw
-        while (SDL_PollEvent(&ev) != 0) {
-            if (ev.type == SDL_QUIT) {
-                run = false;
-            } else if (ev.type == SDL_KEYDOWN) {
-                switch (ev.key.keysym.sym) {
-                    case (SDLK_SPACE):
-                        _selected_shader ^= 1;
-                        break;
-                }
-            }
-        } */
+        glfwPollEvents();
 
         run = !glfwWindowShouldClose(_window);
 

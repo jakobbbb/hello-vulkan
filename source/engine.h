@@ -101,7 +101,7 @@ class Engine {
     int _frame_number{0};
     std::vector<float> _draw_times;
 
-    int _selected_shader{0};
+    int _selected_shader{0};  // NOTE:  Not implemented for glfw
 
     VkExtent2D _window_extent{1280, 720};
     GLFWwindow* _window{nullptr};
