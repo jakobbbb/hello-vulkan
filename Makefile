@@ -18,15 +18,15 @@ build-tests: prepare-build
 shaders: prepare-build
 	$(MAKE) -C $(BUILD_DIR) shaders
 
-.PHONY: download-external
-download-external:
+.PHONY: external
+external:
 	$(MAKE) -C $(EXTERNAL_DIR)
 
 compile_commands.json:
 	ln -fs build/compile_commands.json .
 
 .PHONY: prepare-build
-prepare-build: download-external compile_commands.json
+prepare-build: external compile_commands.json
 	[ -d "$(BUILD_DIR)" ] || mkdir $(BUILD_DIR)
 	cd $(BUILD_DIR) && cmake $(CMAKE_FLAGS) ..
 
