@@ -73,7 +73,8 @@ void Engine::cleanup() {
     vkDestroyInstance(_instance, nullptr);
 
     // window
-    // SDL_DestroyWindow(_window); TODO
+    glfwDestroyWindow(_window);
+    glfwTerminate();
 
 #ifdef PRINT_DRAW_TIME
     std::cout << "Drew " << _frame_number << " frames.\n";
@@ -175,11 +176,10 @@ void Engine::draw() {
 }
 
 void Engine::run() {
-    /* TODO
-    SDL_Event ev;
     bool run = true;
 
     while (run) {
+        /* TODO adapt for glfw
         while (SDL_PollEvent(&ev) != 0) {
             if (ev.type == SDL_QUIT) {
                 run = false;
@@ -190,11 +190,16 @@ void Engine::run() {
                         break;
                 }
             }
-        }
+        } */
+
+        run = !glfwWindowShouldClose(_window);
+
 #ifdef PRINT_DRAW_TIME
         auto start = std::chrono::high_resolution_clock::now();
 #endif
-        draw();
+
+        draw();  // :o
+
 #ifdef PRINT_DRAW_TIME
         auto end = std::chrono::high_resolution_clock::now();
         auto us =
@@ -203,7 +208,6 @@ void Engine::run() {
         _draw_times[_frame_number % _draw_times.size()] = ms;
 #endif
     }
-    */
 }
 
 void Engine::init_glfw() {
@@ -215,17 +219,6 @@ void Engine::init_glfw() {
                                APP_NAME,
                                nullptr,
                                nullptr);
-    /* TODO
-    SDL_Init(SDL_INIT_VIDEO);
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)SDL_WINDOW_VULKAN;
-
-    _window = SDL_CreateWindow(APP_NAME,
-                               SDL_WINDOWPOS_UNDEFINED,
-                               SDL_WINDOWPOS_UNDEFINED,
-                               _window_extent.width,
-                               _window_extent.height,
-                               window_flags);
-    */
 }
 
 void Engine::init_vulkan() {
@@ -248,10 +241,9 @@ void Engine::init_vulkan() {
     _instance = inst.instance;
     _debug_messenger = inst.debug_messenger;
 
-    // Device
-    // SDL_Vulkan_CreateSurface(_window, _instance, &_surface);  TODO
     glfwCreateWindowSurface(_instance, _window, nullptr, &_surface);
 
+    // Device
     vkb::PhysicalDeviceSelector selector{inst};
     vkb::PhysicalDevice phys_dev = selector.set_minimum_version(1, 1)
                                        .set_surface(_surface)
