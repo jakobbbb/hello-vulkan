@@ -207,6 +207,14 @@ void Engine::run() {
 }
 
 void Engine::init_glfw() {
+    glfwInit();
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);  // non-OpenGL context
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);    // no resizing for now
+    _window = glfwCreateWindow(_window_extent.width,
+                               _window_extent.height,
+                               APP_NAME,
+                               nullptr,
+                               nullptr);
     /* TODO
     SDL_Init(SDL_INIT_VIDEO);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)SDL_WINDOW_VULKAN;
@@ -224,6 +232,12 @@ void Engine::init_vulkan() {
     // Create Instance
     vkb::InstanceBuilder inst_builder;
 
+    uint32_t glfw_ext_count = 0;
+    auto glfw_exts = glfwGetRequiredInstanceExtensions(&glfw_ext_count);
+    for (int i = 0; i < glfw_ext_count; ++i) {
+        inst_builder.enable_extension(glfw_exts[i]);
+    }
+
     auto res = inst_builder.set_app_name(APP_NAME)
                    .enable_validation_layers(true)
                    .require_api_version(1, 1, 0)
@@ -236,6 +250,7 @@ void Engine::init_vulkan() {
 
     // Device
     // SDL_Vulkan_CreateSurface(_window, _instance, &_surface);  TODO
+    glfwCreateWindowSurface(_instance, _window, nullptr, &_surface);
 
     vkb::PhysicalDeviceSelector selector{inst};
     vkb::PhysicalDevice phys_dev = selector.set_minimum_version(1, 1)
